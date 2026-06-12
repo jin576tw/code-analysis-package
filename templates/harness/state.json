@@ -1,0 +1,23 @@
+{
+  "run_id": "<timestamp>-<feature>",
+  "feature": "<feature>",
+  "entry_point": "<entry point description>",
+  "entry_type": "ui | ws-api | rest-api | batch | cli",
+  "mode": "A | B | C",
+  "doc_root": "<docs_root>/<MODULE>/<FEATURE>/<PAGE>/<FUNCTION>",
+  "started_at": "<ISO-8601 +TZ>",
+  "ended_at": null,
+  "status": "running",
+  "stages": [
+    { "name": "deps",         "status": "pending", "retry_count": 0, "doc_path": null, "confidence": null, "pending_review": [], "started_at": null, "ended_at": null, "error": null },
+    { "name": "vars",         "status": "pending", "retry_count": 0, "doc_path": null, "confidence": null, "pending_review": [], "started_at": null, "ended_at": null, "error": null },
+    { "name": "erd",          "status": "pending", "retry_count": 0, "doc_path": null, "confidence": null, "pending_review": [], "started_at": null, "ended_at": null, "error": null },
+    { "name": "funcs",        "status": "pending", "retry_count": 0, "doc_path": null, "confidence": null, "pending_review": [], "started_at": null, "ended_at": null, "error": null },
+    { "name": "flow",         "status": "pending", "retry_count": 0, "doc_path": null, "confidence": null, "pending_review": [], "started_at": null, "ended_at": null, "error": null },
+    { "name": "rules",        "status": "pending", "retry_count": 0, "doc_path": null, "confidence": null, "pending_review": [], "started_at": null, "ended_at": null, "error": null },
+    { "name": "ui-verify",    "status": "pending", "retry_count": 0, "doc_path": null, "confidence": null, "pending_review": [], "started_at": null, "ended_at": null, "error": null },
+    { "name": "sd",           "status": "pending", "retry_count": 0, "doc_path": null, "confidence": null, "pending_review": [], "started_at": null, "ended_at": null, "error": null },
+    { "name": "api-contract", "status": "pending", "retry_count": 0, "doc_path": null, "confidence": null, "pending_review": [], "started_at": null, "ended_at": null, "error": null },
+    { "name": "sa",           "status": "pending", "retry_count": 0, "doc_path": null, "confidence": null, "pending_review": [], "started_at": null, "ended_at": null, "error": null }
+  ]
+}

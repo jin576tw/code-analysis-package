@@ -1,0 +1,51 @@
+{
+  "_comment": "verify-run state.json template. Copied and filled by the verify-spec orchestrator at init.",
+  "_schema_version": "1.0",
+
+  "run_id": "<timestamp>-verify-<feature>",
+  "feature": "<function_name>",
+  "module": "<module from profile module/layer map>",
+  "entry_point": "<entry point: page path or class name>",
+  "entry_type": "ui | ws-api | rest-api | batch | cli",
+  "doc_root": "<docs_root>/<MODULE>/<FEATURE>/<PAGE>/<FUNCTION_NAME>",
+  "started_at": null,
+  "ended_at": null,
+  "status": "running",
+
+  "stages": {
+    "mock": {
+      "status": "pending", "started_at": null, "ended_at": null, "confidence": null,
+      "handoff_in": "handoff-init-to-mock.md", "handoff_out": "handoff-mock-to-static.md",
+      "gate_passed": false, "pending_review": [], "retry_count": 0, "error": null
+    },
+    "e2e": {
+      "status": "pending", "started_at": null, "ended_at": null, "confidence": null,
+      "handoff_in": "handoff-init-to-e2e.md", "handoff_out": "handoff-e2e-to-report.md",
+      "gate_passed": false, "pending_review": [], "retry_count": 0, "error": null,
+      "_skip_when": "entry_type != ui"
+    },
+    "static": {
+      "status": "pending", "started_at": null, "ended_at": null, "confidence": null,
+      "handoff_in": "handoff-mock-to-static.md", "handoff_out": "handoff-static-to-report.md",
+      "gate_passed": false, "pending_review": [], "retry_count": 0, "error": null,
+      "_depends_on": ["mock"]
+    },
+    "report": {
+      "status": "pending", "started_at": null, "ended_at": null, "confidence": null,
+      "handoff_in": ["handoff-static-to-report.md", "handoff-e2e-to-report.md"], "handoff_out": null,
+      "gate_passed": false, "pending_review": [], "retry_count": 0, "error": null,
+      "diff_rate": null, "sd_review_path": null,
+      "_depends_on": ["static", "e2e"]
+    }
+  },
+
+  "_legend": {
+    "status_values": ["pending", "running", "done", "failed", "skipped"],
+    "confidence_values": ["high", "medium", "low"],
+    "diff_rate": "float 0.0-1.0, (wrong + omission) / total items; >0.1 -> orchestrator asks whether to regenerate",
+    "gate_passed": "true = write-back read verification passed, downstream may proceed",
+    "parallel_batch_1": ["mock", "e2e"],
+    "sequential_after_mock": "static",
+    "converge": "report"
+  }
+}

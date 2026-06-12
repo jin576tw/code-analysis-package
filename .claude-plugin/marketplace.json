@@ -1,0 +1,16 @@
+{
+  "$schema": "https://json.schemastore.org/claude-code-marketplace.json",
+  "name": "code-analysis-package",
+  "owner": {
+    "name": "jin576tw",
+    "url": "https://github.com/jin576tw"
+  },
+  "plugins": [
+    {
+      "name": "code-analysis-package",
+      "source": "./",
+      "description": "Layered code analysis + spec verification toolkit, decoupled from any single project via a per-project profile card.",
+      "version": "0.1.0"
+    }
+  ]
+}
