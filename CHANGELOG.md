@@ -3,6 +3,19 @@
 All notable changes to this plugin are documented here.
 This project adheres to [Semantic Versioning](https://semver.org).
 
+## [0.1.1] - 2026-06-16
+
+### Fixed
+- **ui-verify standalone mode**: clarified that the worker runs without a
+  `run_id` (no harness files) — inputs read from the docs dir, output is only
+  UI-VERIFY.md — to avoid orchestration-gate stalls when invoked directly.
+- **playwright-verify install strategy**: switched from per-feature
+  `npm init`/`node_modules` to a single Playwright install at the analysis root
+  (shared `package.json` + root `playwright.config.ts` with
+  `testMatch: **/playwright/verify-mock.spec.ts`). Each feature ships only
+  `verify-mock.spec.ts`; screenshots go to its adjacent `images/`. Eliminates
+  duplicate node_modules and root/feature config conflicts.
+
 ## [0.1.0] - 2026-06-12
 
 Initial release. A cross-project code analysis + spec-verification toolkit,

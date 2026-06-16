@@ -18,21 +18,27 @@ files or templates. No secrets — credentials only via the env var named in the
 profile card §8.
 
 ## Procedure
-1. **Orientation (+ optional run state)**: read the profile card §8 (UI verify
-   config: base URL + login, or N/A) and output path. If invoked with a
-   `run_id`, read `<harness_dir>/<run_id>/state.json` and
-   `handoff-rules-to-ui-verify.md` plus FLOWCHART/BUSINESS-RULES/VARIABLE-LIST;
-   set `status=running`, `started_at`. `<harness_dir>` default `.analysis/harness`.
+1. **Orientation — pick the run mode**: read the profile card §8 (UI verify
+   config: base URL + login, or N/A) and output path.
+   - **Orchestration mode** (invoked with a `run_id`): read
+     `<harness_dir>/<run_id>/state.json` and `handoff-rules-to-ui-verify.md` plus
+     FLOWCHART/BUSINESS-RULES/VARIABLE-LIST; set `status=running`, `started_at`.
+     `<harness_dir>` default `.analysis/harness`.
+   - **Standalone mode** (no `run_id`): skip all harness files (state.json /
+     handoff / run-log do not exist); read inputs directly from the docs dir
+     (FLOWCHART/BUSINESS-RULES/VARIABLE-LIST); the only output is UI-VERIFY.md.
 2. **Verify** per the `playwright-verify` skill: choose Mock mode (default) or
    Live mode (only if profile §8 provides URL + login); extract the operation
-   outline; build Mock HTML / navigation; write `spec.ts`; run the
-   check→auto-install→degrade environment flow; capture a screenshot per key step.
+   outline; build Mock HTML / navigation; write `spec.ts`; install/run Playwright
+   **once at the analysis root (not per-feature)** via the skill's
+   check→auto-install→degrade flow; capture a screenshot per key step.
 3. **Write** `<docs_root>/<MODULE>/<FEATURE>/<PAGE>/<FUNCTION>/UI-VERIFY.md` with
    per-step expected vs observed + embedded screenshots; report discrepancies
    against FLOWCHART/BUSINESS-RULES. If degraded, mark scenarios "⏳ pending" and
    include manual commands.
-4. **Handoff (orchestration only)**: update state.json; write
-   `handoff-ui-verify-to-sd.md`; append run-log.
+4. **Handoff (orchestration mode only)**: update state.json; write
+   `handoff-ui-verify-to-sd.md`; append run-log. (Standalone mode writes none of
+   these — UI-VERIFY.md is the sole artifact.)
 
 ## Failure handling (orchestration)
 On failure: `status=failed`, `retry_count+1`, short `error`, `ended_at`. A

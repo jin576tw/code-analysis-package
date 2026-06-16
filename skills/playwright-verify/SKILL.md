@@ -30,15 +30,33 @@ and an adjacent `images/` folder; Playwright assets under a `playwright/` subdir
   flow. Read credentials **only** from the env var named in the profile — never
   hard-code secrets. If the profile says N/A, do not attempt live mode.
 
+## Install strategy: a single Playwright install at the analysis root
+Install Playwright **once** at the analysis/workspace root (a shared
+`package.json` with `@playwright/test` + a root `playwright.config.ts` whose
+`testMatch` is `**/playwright/verify-mock.spec.ts`, so one run from the root
+discovers every feature's spec). **Do not** `npm init` / install `node_modules`
+inside each feature's `playwright/` dir — that duplicates dependencies and
+conflicts with the root config. Each feature only provides
+`<docs_root>/.../<FUNCTION_NAME>/playwright/verify-mock.spec.ts`, writing
+screenshots to its own adjacent `images/` (relative path `../images/`). Install
+and execution always happen at the root.
+
+> If the target project has no root Playwright setup yet, create the shared
+> `package.json` + `playwright.config.ts` at the analysis root on first run,
+> then reuse them for all features.
+
 ## Environment check → auto-install → degrade
-After generating Mock HTML + `spec.ts`, before screenshots:
-1. **Check**: `node --version`; in the `playwright/` dir confirm `package.json`
-   and `npx playwright --version`.
-2. **Auto-install (if check fails)**: `npm init -y`; `npm install -D
-   @playwright/test`; `npx playwright install chromium`; re-verify.
-3. **Degrade (if install fails / Node absent)**: still emit Mock HTML + spec.ts,
-   mark each scenario "⏳ pending", include the manual commands, and tell the user
-   screenshots were not generated.
+After generating Mock HTML + `spec.ts`, before screenshots (all at the root):
+1. **Check**: `node --version`; at the analysis root confirm
+   `npx playwright --version`.
+2. **Auto-install (if check fails, at the root)**: ensure the root
+   `package.json` + `playwright.config.ts` exist; `npm install`; `npx playwright
+   install chromium`; re-verify.
+3. **Run** only this feature's spec from the root:
+   `npx playwright test <docs_root>/.../<FUNCTION_NAME>/playwright/verify-mock.spec.ts --reporter=line`.
+4. **Degrade (if install fails / Node absent)**: still emit Mock HTML + spec.ts,
+   mark each scenario "⏳ pending", include the manual commands (run at the root),
+   and tell the user screenshots were not generated.
 
 ## Steps
 1. **Extract target flow**: read FLOWCHART user-operation section; list all
