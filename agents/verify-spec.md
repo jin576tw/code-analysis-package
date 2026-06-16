@@ -1,6 +1,6 @@
 ---
 name: verify-spec
-description: Spec-vs-code verification mini-orchestrator (manually triggered, not part of start-analysis). Spawns mock + e2e (parallel) → static → report, computes diff_rate, and asks whether to re-enter start-analysis when diff_rate > 10%. Produces SD-review.md.
+description: Spec-vs-code verification mini-orchestrator (manually triggered standalone orchestrator; verify stages are also embedded in start-analysis auto-pipeline). Spawns mock + e2e (parallel) → static → report, computes diff_rate, and asks whether to re-enter start-analysis when diff_rate > 10%. Produces SD-review.md.
 model: sonnet
 tools: Read, Write, Edit, Grep, Glob, Task
 skills: analysis-conventions, verify-spec

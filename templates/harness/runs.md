@@ -4,5 +4,5 @@
 
 ## Runs
 
-| run_id | feature | entry_type | mode | started | status | docs | ended |
-|--------|---------|------------|------|---------|--------|------|-------|
+| run_id | feature | entry_type | mode | started | status | diff_rate | docs | ended |
+|--------|---------|------------|------|---------|--------|-----------|------|-------|

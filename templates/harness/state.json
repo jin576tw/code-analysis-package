@@ -8,6 +8,8 @@
   "started_at": "<ISO-8601 +TZ>",
   "ended_at": null,
   "status": "running",
+  "re_analysis_count": 0,
+  "diff_rate": null,
   "stages": [
     { "name": "deps",         "status": "pending", "retry_count": 0, "doc_path": null, "confidence": null, "pending_review": [], "started_at": null, "ended_at": null, "error": null },
     { "name": "vars",         "status": "pending", "retry_count": 0, "doc_path": null, "confidence": null, "pending_review": [], "started_at": null, "ended_at": null, "error": null },
@@ -18,6 +20,10 @@
     { "name": "ui-verify",    "status": "pending", "retry_count": 0, "doc_path": null, "confidence": null, "pending_review": [], "started_at": null, "ended_at": null, "error": null },
     { "name": "sd",           "status": "pending", "retry_count": 0, "doc_path": null, "confidence": null, "pending_review": [], "started_at": null, "ended_at": null, "error": null },
     { "name": "api-contract", "status": "pending", "retry_count": 0, "doc_path": null, "confidence": null, "pending_review": [], "started_at": null, "ended_at": null, "error": null },
-    { "name": "sa",           "status": "pending", "retry_count": 0, "doc_path": null, "confidence": null, "pending_review": [], "started_at": null, "ended_at": null, "error": null }
+    { "name": "sa",           "status": "pending", "retry_count": 0, "doc_path": null, "confidence": null, "pending_review": [], "started_at": null, "ended_at": null, "error": null },
+    { "name": "vspec-mock",   "status": "pending", "retry_count": 0, "started_at": null, "ended_at": null, "error": null },
+    { "name": "vspec-e2e",    "status": "pending", "retry_count": 0, "started_at": null, "ended_at": null, "error": null },
+    { "name": "vspec-static", "status": "pending", "retry_count": 0, "started_at": null, "ended_at": null, "error": null },
+    { "name": "vspec-report", "status": "pending", "retry_count": 0, "diff_rate": null,  "started_at": null, "ended_at": null, "error": null }
   ]
 }
