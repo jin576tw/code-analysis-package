@@ -1,6 +1,6 @@
 ---
 name: verify-spec
-description: Spec-vs-code verification. Checks an analysis SD.md against the real code via three-layer comparison (mock ↔ real code ↔ SD) plus optional dynamic UI verification, converging into SD-review.md with a diff_rate. Manually triggered; not part of the start-analysis DAG.
+description: Spec-vs-code verification. Checks an analysis SD.md against the real code via three-layer comparison (mock ↔ real code ↔ SD) plus optional dynamic UI verification, converging into SD-review.md with a diff_rate. Runs automatically as the final phase of start-analysis (after sa); also manually triggerable as a standalone verify-spec orchestrator.
 ---
 
 # Verify Spec (SD ↔ code verification)
@@ -8,6 +8,10 @@ description: Spec-vs-code verification. Checks an analysis SD.md against the rea
 Verifies an analysed feature's `SD.md` against the actual code and produces
 `SD-review.md` with a quantified `diff_rate`. Read-only with respect to existing
 analysis docs — it reports differences, it does not silently edit them.
+
+> **Invocation modes**:
+> - **Automatic**: `start-analysis` runs this pipeline immediately after `sa` completes (§5.5–5.6 in the orchestrator). No separate trigger needed.
+> - **Manual (standalone)**: invoke `verify-spec` directly when you want to re-verify an existing SD.md without re-running the full analysis pipeline.
 
 > **Read the profile card** for the module/layer map and output path; auto-detect
 > if absent. **Load skill `analysis-conventions`.** Requires an existing `SD.md`

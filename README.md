@@ -69,23 +69,32 @@ card §7; default `.analysis/docs/<MODULE>/<FEATURE>/<PAGE>/<FUNCTION>/`):
 | 4a | `SD.md` | sd | all |
 | 4b | `API-CONTRACT.md` | api-contract | WS/API only |
 | 4b | `SA.md` | sa / sa-api / sa-batch | all (dispatch) |
-| verify | `SD-review.md` | verify-spec | on demand |
+| verify | `SD-review.md` | verify-spec | auto (post-sa) + on demand |
 
 ## Pipeline (DAG)
 
-```
-deps → (vars ‖ erd ‖ funcs) → flow → rules → ui-verify(UI only)
-     → sd → api-contract(WS/API only) → sa
-```
-
-Verification is a separate, manually-triggered pipeline:
+`start-analysis` runs the full pipeline end-to-end, including an automatic
+verify phase after `sa`:
 
 ```
-verify-spec: init → (mock ‖ e2e) → static → report → diff_rate
+deps → (vars ‖ erd ‖ funcs) → flow → rules → [ui-verify: UI only]
+     → sd → [api-contract: WS/API only] → sa
+     → (vspec-mock ‖ vspec-e2e) → vspec-static → vspec-report   ← auto verify
 ```
 
-If `diff_rate > 10%`, verify-spec offers to re-enter `start-analysis` to
-regenerate the affected docs (code is the source of truth).
+`verify-spec` can also be triggered standalone to re-verify an existing
+`SD.md` without re-running the full analysis pipeline:
+
+```
+verify-spec (standalone): init → (mock ‖ e2e) → static → report → diff_rate
+```
+
+**diff_rate gate** — when `diff_rate > 10%`:
+- `start-analysis`: automatically applies the impact matrix to select mode B
+  (≤3 stages affected) or mode A (full re-run), re-analyses once, then
+  re-runs verify to measure the new `diff_rate`.
+- `verify-spec` (standalone): lists the top differences and asks whether to
+  re-enter `start-analysis` (code is the source of truth).
 
 ## Components
 

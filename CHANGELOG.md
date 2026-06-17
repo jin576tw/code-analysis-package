@@ -3,6 +3,35 @@
 All notable changes to this plugin are documented here.
 This project adheres to [Semantic Versioning](https://semver.org).
 
+## [0.1.2] - 2026-06-16
+
+### Added
+- **start-analysis auto-verify phase (§5.5)**: after `sa` completes,
+  `start-analysis` automatically dispatches `vspec-mock` ‖ `vspec-e2e` →
+  `vspec-static` → `vspec-report` with the same retry (≤2) and gate rules as
+  analysis stages. No separate trigger needed.
+- **diff_rate gate with auto re-analysis (§5.6)**: if `diff_rate > 10%`,
+  `start-analysis` parses `SD-review.md §5`, applies the analysis-orchestration
+  impact matrix, and runs mode B (≤3 stages) or mode A (full pipeline) — once
+  (`re_analysis_count` cap). After re-analysis, the verify phase reruns on the
+  updated `SD.md`.
+- **「決策執行一致性」reminder**: appended to `summary.md` whenever
+  auto re-analysis was performed, prompting contributors to grep
+  `skills/` and `agents/` for stale patterns.
+- **state.json fields**: `re_analysis_count` (int, default 0) and `diff_rate`
+  (float | null) at the run level; four new vspec stages
+  (`vspec-mock`, `vspec-e2e`, `vspec-static`, `vspec-report`) in the stages
+  array; `vspec-report` stage carries its own `diff_rate` field.
+- **runs.md `diff_rate` column**: orchestrator writes the final `diff_rate`
+  into the runs index on completion.
+
+### Changed
+- **`skills/verify-spec` description**: updated from "Manually triggered; not
+  part of the start-analysis DAG" to reflect dual invocation modes (auto
+  post-sa + standalone).
+- **`agents/verify-spec` description**: updated to note that verify stages are
+  also embedded in the `start-analysis` auto-pipeline.
+
 ## [0.1.1] - 2026-06-16
 
 ### Fixed
