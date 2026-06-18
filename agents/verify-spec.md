@@ -59,7 +59,9 @@ Dispatch `vspec-report`; wait; confirm report done, `diff_rate` set, and
 ### Step 6 — Wrap up
 Write `summary.md` (feature, module, diff_rate, SD-review path, per-stage status,
 post-processing decision); set state `status=done`, `ended_at`; update the runs
-index row. Final output: run_id, SD-review path, diff_rate, post-processing decision.
+index row (status, last_stage, diff_rate, docs, ended; operation: read whole file
+→ modify that row → write back whole). Final output: run_id, SD-review path,
+diff_rate, post-processing decision.
 
 ## Failure handling
 If any sub-agent still fails after retry: set state `status=failed`, update the

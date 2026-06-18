@@ -47,9 +47,25 @@ writes), state.json read-back after each stage, summary.md / runs.md writes.
   is blank or still a `<placeholder>`, stop with:
   `❌ Profile incomplete — <field(s)> not set. Run \`/analysis-init\` to
   regenerate the profile card.` Do not proceed.
-- Scan `<harness_dir>/*/state.json` for an incomplete run (any stage not in
-  {done, skipped}). If found, ask the user: resume / new / abandon. On resume,
-  continue from the first unfinished stage.
+- Scan `<harness_dir>/*/state.json` for an incomplete run. **Incomplete** means
+  any stage with `status` ∉ {done, skipped}; `status=running` indicates a session
+  interrupted mid-stage (not a live agent) and is treated the same as `pending`.
+  If found, ask the user: resume / new / abandon.
+  - **resume**: re-dispatch each stage whose status is `pending` or `running`
+    (in DAG order). For `running` stages, reset status to `pending` before
+    dispatching; do **not** increment `retry_count` for these (session interruption
+    is not a logical failure).
+  - **new**: proceed with a fresh run_id.
+  - **abandon**: mark all non-{done,skipped} stages as `failed`; set run
+    `status=partial`; move `summary.md` (if exists) to
+    `<harness_dir>/_archive/<year>/`; continue with a new run.
+- **Cleanup (7-day retention)**: after handling incomplete runs, scan
+  `<harness_dir>/*/state.json` for runs where `started_at < now − 7d` and
+  `status` ∈ {done, failed, partial}:
+  - Move `summary.md` to `<harness_dir>/_archive/<year>/` (create `_archive/`
+    if absent).
+  - Delete `state.json`, `handoff-*.md`, `run-log.md` from that run dir.
+  - Remove that run's row from `runs.md`.
 
 ### 2. Mode detection (per analysis-orchestration skill)
 - **A** reverse-analysis ("analyse X") → full set.
@@ -73,6 +89,22 @@ Write the initial handoff `handoff-init-to-deps.md`. Use the templates in
 `${CLAUDE_PLUGIN_ROOT}/templates/harness/`.
 When writing state.json at any point (init or stage update): read whole file →
 modify in memory → write back whole.
+
+### 4b. 第零規則 — runs.md write-and-verify gate
+
+**Must complete before dispatching any worker.**
+
+1. If `<harness_dir>/runs.md` does not exist → create it from
+   `${CLAUDE_PLUGIN_ROOT}/templates/harness/runs.md` (copy template).
+2. Append a run row (newest on top, below the table header) with columns:
+   run_id, feature, entry_type, mode, started ISO, status=running,
+   re_analysis_count=0, last_stage=—, diff_rate=—, docs=0/N, ended=—.
+3. Immediately read back `runs.md`; verify the row with this run_id is present
+   and `status=running`.
+   - ✅ Pass → print `[GATE] runs.md verified — starting DAG` → continue to §5.
+   - ❌ Fail → **do not stop**; print
+     `[GATE] ⚠️ runs.md write failed: <reason> — harness tracking degraded` →
+     continue to §5 (analysis proceeds; harness tracking is best-effort this run).
 
 ### 5. DAG dispatch (via Task)
 Dispatch in dependency order, passing `run_id`, `doc_root`, entry point and the
@@ -141,7 +173,10 @@ Report progress per stage. When the pipeline ends, write
   無舊做法或硬編碼殘留，避免「決策寫了但 prompt 未更新」的執行脫節。
   ```
 
-Update the `<harness_dir>/runs.md` index row (include `diff_rate` column).
+Update the `<harness_dir>/runs.md` index row: set `status` (done/failed/partial),
+`re_analysis_count`, `last_stage` (name of the last completed stage), `diff_rate`,
+`docs` (N/total), and `ended` ISO timestamp. Operation: read whole file → modify
+that row in memory → write back whole.
 Do **not** write session-level files outside `<harness_dir>` / `<docs_root>`.
 
 ## Welcome behaviour

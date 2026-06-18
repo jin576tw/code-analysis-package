@@ -1,4 +1,5 @@
 {
+  "_schema_version": "1.0",
   "run_id": "<timestamp>-<feature>",
   "feature": "<feature>",
   "entry_point": "<entry point description>",

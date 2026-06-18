@@ -3,6 +3,31 @@
 All notable changes to this plugin are documented here.
 This project adheres to [Semantic Versioning](https://semver.org).
 
+## [0.3.0] - 2026-06-18
+
+### Added
+- **第零規則 — runs.md write-and-verify gate (P8)**: `start-analysis` now inserts
+  a §4b block that writes the run row to `runs.md`, immediately reads it back to
+  verify, and prints `[GATE] runs.md verified` on success or
+  `[GATE] ⚠️ runs.md write failed — harness tracking degraded` on failure without
+  stopping the DAG. Auto-creates `runs.md` from template if absent.
+- **session interruption recovery — status=running semantics (P9)**: §1 startup
+  now explicitly maps `status=running` to "session interrupted mid-stage (treat as
+  pending)". On resume, running stages are reset to `pending` before re-dispatch
+  and their `retry_count` is **not** incremented (session abort ≠ logical failure).
+  Abandon flow clearly defined: mark non-{done,skipped} stages as `failed`, set
+  run `status=partial`, archive `summary.md` to `_archive/<year>/`.
+- **runs.md new columns (P10)**: template `runs.md` table gains `re_analysis_count`
+  and `last_stage` columns. `start-analysis` §6 and `verify-spec` §6 write these
+  fields on run completion.
+- **harness 7-day cleanup (P11)**: `start-analysis` §1 now scans for runs where
+  `started_at < now − 7d` and `status ∈ {done, failed, partial}`, moves
+  `summary.md` to `_archive/<year>/`, deletes `state.json` / `handoff-*.md` /
+  `run-log.md`, and removes the row from `runs.md`.
+- **state.json `_schema_version` (P12)**: `templates/harness/state.json` now
+  includes `"_schema_version": "1.0"` at the root level, matching `verify-state.json`
+  and enabling future schema compatibility checks.
+
 ## [0.2.0] - 2026-06-18
 
 ### Added
