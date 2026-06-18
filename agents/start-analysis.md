@@ -19,6 +19,17 @@ layer's content is produced by its worker agent. You handle: profile check, path
 - Only write under `<docs_root>` (worker outputs) and `<harness_dir>/<run_id>/`
   (run state). No secrets.
 
+**Violation criteria** — any of the following constitutes a scope violation:
+- Executing a skill directly to produce an analysis document (e.g. running
+  `dependency-analysis` yourself to create DEPENDENCIES.md).
+- Writing an analysis document (DEPENDENCIES.md, FLOWCHART.md, SD.md, …) without
+  dispatching the corresponding worker via the Task tool.
+- Calling Edit/Write on `<docs_root>` files without a worker Task call.
+
+**Permitted exceptions** (orchestrator may act inline):
+welcome dialogue, profile validation gate, harness init (state.json / handoff
+writes), state.json read-back after each stage, summary.md / runs.md writes.
+
 ## Worker agents (dispatch by name via Task)
 `deps`, `vars`, `erd`, `funcs`, `flow`, `rules`, `ui-verify`, `sd`,
 `api-contract`, `sa`, `vspec-mock`, `vspec-e2e`, `vspec-static`, `vspec-report`.
@@ -30,6 +41,12 @@ layer's content is produced by its worker agent. You handle: profile check, path
   run `/analysis-init` first (or proceed with auto-detection, noting reduced
   accuracy). Resolve `<docs_root>` (§7) and `<harness_dir>` (§10, default
   `.analysis/harness`).
+- **Profile validation gate**: verify the profile has (a) a non-placeholder
+  `docs_root` value (§7), (b) at least one filled row in the module/layer map
+  (§3), and (c) at least one checked entry-point type (§4). If any required field
+  is blank or still a `<placeholder>`, stop with:
+  `❌ Profile incomplete — <field(s)> not set. Run \`/analysis-init\` to
+  regenerate the profile card.` Do not proceed.
 - Scan `<harness_dir>/*/state.json` for an incomplete run (any stage not in
   {done, skipped}). If found, ask the user: resume / new / abandon. On resume,
   continue from the first unfinished stage.
@@ -42,7 +59,9 @@ layer's content is produced by its worker agent. You handle: profile check, path
 
 ### 3. Path & entry type
 Determine MODULE/FEATURE/PAGE and entry-point type from the profile module/layer
-map. For a batch entry point, ensure `deps` runs `batch-analysis` first.
+map. For a batch entry point, add a `batch-analysis` stage as the first entry in
+the stages array with `status=pending`; mark it `skipped` for all non-batch entry
+types. Ensure `deps` invokes the `batch-analysis` skill as part of its analysis.
 
 ### 4. Run-state init
 Create `<harness_dir>/<run_id>/state.json` (run_id = `<timestamp>-<feature>`)
@@ -52,6 +71,8 @@ listing every stage with `status=pending`, the resolved `doc_root`,
 analysis stages; also initialise `re_analysis_count=0` and `diff_rate=null`.
 Write the initial handoff `handoff-init-to-deps.md`. Use the templates in
 `${CLAUDE_PLUGIN_ROOT}/templates/harness/`.
+When writing state.json at any point (init or stage update): read whole file →
+modify in memory → write back whole.
 
 ### 5. DAG dispatch (via Task)
 Dispatch in dependency order, passing `run_id`, `doc_root`, entry point and the
@@ -66,6 +87,10 @@ relevant handoff path to each worker:
 After each worker, read back its state.json stage. On `failed` with
 `retry_count<2`, re-dispatch that worker; on a second failure, stop the affected
 branch and report.
+
+**Confidence tracking**: if a completed stage has `confidence == "low"`, add its
+name and `pending_review` items to an internal `low_confidence_stages` list. Do
+not halt the pipeline — surfaced in §6 summary.
 
 ### 5.5. Auto-verify phase (runs immediately after `sa` completes)
 Dispatch the verify sub-agents to check SD vs code automatically:
@@ -103,6 +128,9 @@ Read `diff_rate` from state.json after vspec-report completes.
 Report progress per stage. When the pipeline ends, write
 `<harness_dir>/<run_id>/summary.md` containing:
 - Stage list with status, doc paths, confidence, pending-review totals.
+- **Low-confidence stages** (if any): list each stage name and its
+  `pending_review` items; prefix with `⚠️ Low confidence — human review
+  recommended before relying on downstream documents from this stage.`
 - **Spec quality block**:
   - `diff_rate: X.X%` — mark ✅ if ≤ 10%, ⚠️ if > 10%.
   - `SD-review.md` path.

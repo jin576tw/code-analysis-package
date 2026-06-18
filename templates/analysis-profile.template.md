@@ -29,7 +29,7 @@
 - **Build commands**: <e.g. `mvn clean install -DskipTests` / `npm run build`>
 - **Test commands**: <e.g. `mvn test` / `npm test`>
 
-## 3. Module / layer map
+## 3. Module / layer map  <!-- REQUIRED: fill at least one row -->
 
 > Where each architectural layer lives. Use path globs relative to repo root.
 > Add/remove rows to match the project. Skills use this to locate code.
@@ -47,7 +47,7 @@
 | Shared utilities | `<glob>` | |
 | DB migration scripts | `<glob>` | |
 
-## 4. Entry-point types present
+## 4. Entry-point types present  <!-- REQUIRED: tick at least one -->
 
 > Tick the entry-point types this project has. The `sa` agent dispatches by
 > entry-point type (UI / WS-API / Batch); orchestration skips inapplicable steps.
@@ -76,7 +76,7 @@ feature — e.g. "search xhtml under webapp", "controllers annotated @RestContro
 - **Project-specific pitfalls**: <e.g. selective vs full update semantics,
   object-reference sharing, BigDecimal compare — or "none known">
 
-## 7. Output documents
+## 7. Output documents  <!-- REQUIRED: set docs_root -->
 
 - **Docs output root**: <e.g. `docs/analysis` / `.analysis/docs`>
 - **Path convention**: <e.g. `<root>/<module>/<feature>/<page>/<function>/<TYPE>.md`>

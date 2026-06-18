@@ -32,6 +32,7 @@ module + entry_point + entry_type from SD.md / DEPENDENCIES.md.
 `${CLAUDE_PLUGIN_ROOT}/templates/harness/verify-state.json` → state.json and
 fill it; write `handoff-init-to-mock.md` and `handoff-init-to-e2e.md`
 (doc_root, feature, module, entry_point). Read back to verify; on failure stop.
+When writing state.json: read whole file → modify in memory → write back whole.
 
 ### Step 2 — Parallel batch [mock, e2e]
 Dispatch `vspec-mock` and `vspec-e2e` together (single batch of Task calls);

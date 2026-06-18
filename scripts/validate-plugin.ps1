@@ -99,7 +99,18 @@ if (Test-Path $agentsDir) {
   Write-Host "[ok] agents found: $agentCount" -ForegroundColor Green
 }
 
-# 6. ESP residue (allowed only in templates/examples/ and the blank template tech-stack examples)
+# 6b. Atomic-write pattern: agents that update state.json must also read it first
+Get-ChildItem -File -Filter *.md $agentsDir | ForEach-Object {
+  $content = Get-Content -Raw $_.FullName
+  if ($content -match 'state\.json' -and $content -match '(?i)(status\s*=|\.status\b)') {
+    if ($content -notmatch '(?i)read whole file|modify in memory') {
+      $warnings.Add("agents/$($_.Name) updates state.json but lacks atomic-write instruction (read whole file -> modify in memory -> write back whole)")
+    }
+  }
+}
+Write-Host "[ok] atomic-write check done" -ForegroundColor Green
+
+# 7. ESP residue (allowed only in templates/examples/ and the blank template tech-stack examples)
 $espPattern = 'esp-system|com\.tgl|PremiumConst|reissuebyESP|esp\.job\.'
 $hits = Get-ChildItem -Recurse -File $Root -Include *.md,*.json,*.css |
   Where-Object { $_.FullName -notmatch 'templates[\\/]examples' } |

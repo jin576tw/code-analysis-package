@@ -22,6 +22,7 @@ worker. Do not modify skill files or templates. No secrets.
    and (if present) `handoff-ui-verify-to-sd.md`, plus DEPENDENCIES/FUNCTION-LIST/
    FLOWCHART (required) and VARIABLE-LIST/ERD/BUSINESS-RULES (auxiliary); set
    `status=running`, `started_at`. `<harness_dir>` default `.analysis/harness`.
+   When writing state.json: read whole file → modify in memory → write back whole.
 2. **Analyse** per the `sd` skill: synthesise §1–§9 (design overview, architecture
    + entry-point annotation, method decomposition + I/O, data flow, transaction
    strategy, integration points, exception paths, design decisions, target-

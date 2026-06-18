@@ -21,6 +21,7 @@ correct Layer-N worker. Do not modify skill files or templates. No secrets.
    orchestrator with a `run_id`, read `<harness_dir>/<run_id>/state.json` and
    `handoff-deps-to-vars.md`, set `status=running`, `started_at`. `<harness_dir>`
    default `.analysis/harness`.
+   When writing state.json: read whole file → modify in memory → write back whole.
 2. **Analyse** per the `variable-list` skill: discover UI/transport/persisted/
    constant/computed/state fields, classify, trace cross-layer flow, note
    value-conversion points. Anti-hallucination: trace to real code; flag

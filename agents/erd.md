@@ -21,6 +21,7 @@ Layer-N worker. Do not modify skill files or templates. No secrets.
    managers; output path; auto-detect if absent). If invoked with a `run_id`,
    read `<harness_dir>/<run_id>/state.json` and `handoff-deps-to-erd.md`, set
    `status=running`, `started_at`. `<harness_dir>` default `.analysis/harness`.
+   When writing state.json: read whole file → modify in memory → write back whole.
 2. **Analyse** per the `erd` skill: identify storage/model/UI/external entities +
    sequences, map relationships with cardinality, assign attributes, trace data
    flow, annotate transaction boundaries (⚠️ cross-TM). Trace to real code; flag

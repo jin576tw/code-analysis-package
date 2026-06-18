@@ -17,10 +17,16 @@ edit analysis docs. No secrets — credentials only via the env var named in
 profile §8. Mock HTML by default; live mode only if profile §8 enables it.
 
 ## Procedure
-1. Read `<harness_dir>/<run_id>/state.json` and `handoff-init-to-e2e.md`. If the
-   entry point is **not UI**, set `e2e.status=skipped`, write a brief
-   `handoff-e2e-to-report.md` ("N/A: non-UI entry point"), and report skipped.
+1. **Mode gate**: if `run_id` is provided and `<harness_dir>/runs.md` exists →
+   **Harness mode**: read `<harness_dir>/<run_id>/state.json` and
+   `handoff-init-to-e2e.md`. If the entry point is **not UI**, set
+   `e2e.status=skipped`, write a brief `handoff-e2e-to-report.md`
+   ("N/A: non-UI entry point"), and report skipped.
+   If `run_id` is absent or `runs.md` does not exist → **Standalone mode**: skip
+   state.json and handoff; check the entry type from SD.md / DEPENDENCIES.md;
+   if non-UI, report skipped without writing harness files.
    `<harness_dir>` default `.analysis/harness`.
+   When writing state.json: read whole file → modify in memory → write back whole.
 2. Otherwise set `e2e.status=running`, `started_at`. Per the `playwright-verify`
    skill: derive the operation outline from FLOWCHART/BUSINESS-RULES, build Mock
    HTML, write `spec.ts`, run the check→auto-install→degrade environment flow,

@@ -16,8 +16,14 @@ Only mock generation from SD. Write only under `<harness_dir>/<run_id>/`. Do not
 edit analysis docs or real source. No secrets.
 
 ## Procedure
-1. Read `<harness_dir>/<run_id>/state.json` and `handoff-init-to-mock.md`; set
-   `mock.status=running`, `started_at`. `<harness_dir>` default `.analysis/harness`.
+1. **Mode gate**: if `run_id` is provided and `<harness_dir>/runs.md` exists →
+   **Harness mode**: read `<harness_dir>/<run_id>/state.json` and
+   `handoff-init-to-mock.md`; set `mock.status=running`, `started_at`.
+   If `run_id` is absent or `runs.md` does not exist → **Standalone mode**: skip
+   state.json and handoff; read `<doc_root>/SD.md` directly; do not write any
+   harness files.
+   `<harness_dir>` default `.analysis/harness`.
+   When writing state.json: read whole file → modify in memory → write back whole.
 2. Read the target `SD.md`. In the project's language (per the profile tech
    stack), generate a mock skeleton under `<harness_dir>/<run_id>/mock/` that
    reflects **exactly what the SD describes**: class/method signatures, I/O

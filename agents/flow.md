@@ -22,6 +22,7 @@ Layer-N worker. Do not modify skill files or templates. No secrets.
    (`handoff-vars-to-flow.md`, `handoff-erd-to-flow.md`, `handoff-funcs-to-flow.md`)
    plus the Layer 2 docs; set `status=running`, `started_at`. `<harness_dir>`
    default `.analysis/harness`.
+   When writing state.json: read whole file → modify in memory → write back whole.
 2. **Analyse** per the `flowchart` skill: confirm real execution flow first;
    draw user-operation, method-call, branching, transaction-boundary,
    error-handling and external-interaction diagrams (mermaid; ASCII fallback);

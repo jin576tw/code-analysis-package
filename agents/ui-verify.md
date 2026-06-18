@@ -24,6 +24,7 @@ profile card §8.
      `<harness_dir>/<run_id>/state.json` and `handoff-rules-to-ui-verify.md` plus
      FLOWCHART/BUSINESS-RULES/VARIABLE-LIST; set `status=running`, `started_at`.
      `<harness_dir>` default `.analysis/harness`.
+     When writing state.json: read whole file → modify in memory → write back whole.
    - **Standalone mode** (no `run_id`): skip all harness files (state.json /
      handoff / run-log do not exist); read inputs directly from the docs dir
      (FLOWCHART/BUSINESS-RULES/VARIABLE-LIST); the only output is UI-VERIFY.md.

@@ -23,6 +23,7 @@ modify skill files or templates. No secrets.
    `<harness_dir>/<run_id>/state.json` and `handoff-sd-to-api-contract.md` plus
    the endpoint source + base classes and SD.md; set `status=running`,
    `started_at`. `<harness_dir>` default `.analysis/harness`.
+   When writing state.json: read whole file → modify in memory → write back whole.
 2. **Analyse** per the `api-contract` skill: identify endpoints; walk Request/
    Response inheritance chains (list all fields incl. inherited + nested);
    extract validation rules and return codes. Each API self-contained. Trace to code.

@@ -11,6 +11,7 @@
   "re_analysis_count": 0,
   "diff_rate": null,
   "stages": [
+    { "name": "batch-analysis", "status": "skipped", "retry_count": 0, "doc_path": null, "confidence": null, "pending_review": [], "started_at": null, "ended_at": null, "error": null },
     { "name": "deps",         "status": "pending", "retry_count": 0, "doc_path": null, "confidence": null, "pending_review": [], "started_at": null, "ended_at": null, "error": null },
     { "name": "vars",         "status": "pending", "retry_count": 0, "doc_path": null, "confidence": null, "pending_review": [], "started_at": null, "ended_at": null, "error": null },
     { "name": "erd",          "status": "pending", "retry_count": 0, "doc_path": null, "confidence": null, "pending_review": [], "started_at": null, "ended_at": null, "error": null },

@@ -31,6 +31,7 @@ files or templates. No secrets.
    and `handoff-sd-to-sa.md` (and `handoff-api-contract-to-sa.md` for WS/API),
    plus SD/FLOWCHART/BUSINESS-RULES (required) and UI-VERIFY for UI; set
    `status=running`, `started_at`. `<harness_dir>` default `.analysis/harness`.
+   When writing state.json: read whole file → modify in memory → write back whole.
 2. **Analyse** per the selected SA skill: plain-language, audience-appropriate,
    Given-When-Then behaviour specs; embed UI screenshots for UI entry points;
    reasoning notes for non-intuitive conclusions. Trace to code.

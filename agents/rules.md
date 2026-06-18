@@ -20,6 +20,7 @@ correct Layer-N worker. Do not modify skill files or templates. No secrets.
    `<harness_dir>/<run_id>/state.json` and `handoff-flow-to-rules.md` plus the
    FLOWCHART and Layer 1-2 docs; set `status=running`, `started_at`.
    `<harness_dir>` default `.analysis/harness`.
+   When writing state.json: read whole file → modify in memory → write back whole.
 2. **Analyse** per the `business-rules` skill: derive rules after flow is
    confirmed; express in business language; layer rules (core/validation/
    data-consistency vs implementation detail); Given-When-Then for core rules;

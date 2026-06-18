@@ -17,11 +17,19 @@ run-state under `<harness_dir>/<run_id>/`. **Do not edit any existing analysis
 doc** — this report is read-only with respect to them. No secrets.
 
 ## Procedure
-1. Read `<harness_dir>/<run_id>/state.json`, `handoff-static-to-report.md`
-   (STATIC-DIFF) and `handoff-e2e-to-report.md` (UI-DIFF or N/A); set
-   `report.status=running`, `started_at`. `<harness_dir>` default `.analysis/harness`.
+1. **Mode gate**: if `run_id` is provided and `<harness_dir>/runs.md` exists →
+   **Harness mode**: read `<harness_dir>/<run_id>/state.json`,
+   `handoff-static-to-report.md` (STATIC-DIFF) and `handoff-e2e-to-report.md`
+   (UI-DIFF or N/A); set `report.status=running`, `started_at`.
+   If `run_id` is absent or `runs.md` does not exist → **Standalone mode**: skip
+   state.json; ask the user to supply STATIC-DIFF entries (or point to an
+   existing `handoff-static-to-report.md`); do not write any harness files.
+   `<harness_dir>` default `.analysis/harness`.
+   When writing state.json: read whole file → modify in memory → write back whole.
 2. Merge entries; compute
    `diff_rate = (❌ wrong + ⚠️ omission) / total reviewed items` (float 0.0–1.0).
+   For Mode B (linked-update) runs, the denominator is only the items belonging
+   to re-analysed stages — not the full document set.
 3. Write `<doc_root>/SD-review.md` using
    `${CLAUDE_PLUGIN_ROOT}/templates/harness/SD-review-template.md`: §1 summary
    stats (incl. diff_rate, E2E diffs or N/A), §2 difference detail (❌/⚠️ with SD

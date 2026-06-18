@@ -21,6 +21,7 @@
 | E2E UI diffs (UI entry points only) | N / N/A (non-UI) |
 
 > Formula: `diff_rate = (❌ wrong + ⚠️ omission) / total reviewed items`.
+> Mode B (linked-update): denominator is only items in the re-analysed stages.
 > When diff_rate > 10%, the orchestrator asks whether to re-enter start-analysis.
 
 ---

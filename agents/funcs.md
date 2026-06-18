@@ -21,6 +21,7 @@ the correct Layer-N worker. Do not modify skill files or templates. No secrets.
    point use the `batch-analysis` skill. If invoked with a `run_id`, read
    `<harness_dir>/<run_id>/state.json` and `handoff-deps-to-funcs.md`, set
    `status=running`, `started_at`. `<harness_dir>` default `.analysis/harness`.
+   When writing state.json: read whole file → modify in memory → write back whole.
 2. **Analyse** per the `function-list` skill: identify entry points, trace the
    call chain across layers, classify methods, document each (signature, layer,
    transaction, accessed storage + op, external calls, complexity); for high/

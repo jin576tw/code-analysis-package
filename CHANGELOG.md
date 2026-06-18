@@ -3,6 +3,45 @@
 All notable changes to this plugin are documented here.
 This project adheres to [Semantic Versioning](https://semver.org).
 
+## [0.2.0] - 2026-06-18
+
+### Added
+- **Profile validation gate (P1)**: `start-analysis` §1 now validates the profile
+  card before proceeding — checks `docs_root`, at least one filled module/layer-map
+  row, and at least one checked entry-point type. Missing or placeholder fields
+  produce a clear `❌ Profile incomplete` error with a `/analysis-init` prompt.
+- **HARD RULES violation criteria (P2)**: `start-analysis` §1 Scope now lists
+  explicit violation examples (orchestrator executing a skill directly, writing
+  analysis docs without dispatching a worker, calling Edit/Write on docs_root
+  without a Task call) and a permitted-exceptions allowlist.
+- **Low-confidence stage tracking (P3)**: orchestrator collects `confidence==low`
+  stages during the DAG run and surfaces them in the final summary with
+  `⚠️ Low confidence — human review recommended` warnings.
+- **diff_rate formula documentation (P4)**: `vspec-report` procedure and
+  `templates/harness/SD-review-template.md §1` now state the formula
+  `diff_rate = (❌ wrong + ⚠️ omission) / total reviewed items` with a Mode B
+  note (denominator = re-analysed stages only).
+- **vspec Standalone mode (P5)**: `vspec-mock`, `vspec-static`, `vspec-report`,
+  and `vspec-e2e` each have a Mode gate in Step 1 — if `run_id` is absent or
+  `runs.md` does not exist the agent operates in Standalone mode (reads docs
+  directly, writes no harness files), enabling independent reruns.
+- **batch-analysis stage in state.json (P7)**: template `state.json` now includes
+  an optional `batch-analysis` stage (first in the stages array; default `skipped`,
+  set to `pending` for batch entry points). `start-analysis` §3 initialises it
+  accordingly.
+- **`analysis-profile.template.md` REQUIRED markers (P1)**: §3, §4, and §7
+  headings now carry `<!-- REQUIRED -->` comments to guide profile completion.
+
+### Changed
+- **All worker agents — atomic write enforcement (P6)**: every agent that writes
+  `state.json` (`vars`, `erd`, `funcs`, `flow`, `rules`, `sd`, `sa`, `api-contract`,
+  `ui-verify`, `vspec-mock`, `vspec-static`, `vspec-report`, `vspec-e2e`,
+  `start-analysis`, `verify-spec`) now explicitly states
+  "read whole file → modify in memory → write back whole" to prevent partial
+  JSON writes.
+- **`scripts/validate-plugin.ps1`**: added check 6b (atomic-write pattern) that
+  warns when an agent writes `state.json` without the read-modify-write instruction.
+
 ## [0.1.2] - 2026-06-16
 
 ### Added
