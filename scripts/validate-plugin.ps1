@@ -12,6 +12,10 @@
    5. Every agent `skills:` reference resolves to an existing skill.
    6. No ESP-specific hardcoding leaks outside templates/examples/ and the
       blank profile template.
+   6b. Every agent that writes state.json uses the atomic read-modify-write pattern.
+   7. Every .kiro/agents/*.json is encoded UTF-8 without BOM (kiro-cli serde_json
+      does not tolerate BOMs and fails silently at runtime).
+   8. No project-specific hardcoding (checks for ESP/project residue).
 
   Exit code 0 = all green; 1 = problems found.
 
@@ -110,7 +114,22 @@ Get-ChildItem -File -Filter *.md $agentsDir | ForEach-Object {
 }
 Write-Host "[ok] atomic-write check done" -ForegroundColor Green
 
-# 7. ESP residue (allowed only in templates/examples/ and the blank template tech-stack examples)
+# 7. UTF-8 BOM check for .kiro/agents/*.json
+$kiroAgentsDir = Join-Path $Root '.kiro/agents'
+if (Test-Path $kiroAgentsDir) {
+  $bomBytes = [byte[]](0xEF, 0xBB, 0xBF)
+  Get-ChildItem -File -Filter *.json $kiroAgentsDir | ForEach-Object {
+    $bytes = [System.IO.File]::ReadAllBytes($_.FullName)
+    if ($bytes.Count -ge 3 -and $bytes[0] -eq 0xEF -and $bytes[1] -eq 0xBB -and $bytes[2] -eq 0xBF) {
+      $warnings.Add("UTF-8 BOM detected in .kiro/agents/$($_.Name) — kiro-cli (serde_json) will fail at runtime. Re-save as UTF-8 without BOM.")
+    }
+  }
+  Write-Host "[ok] UTF-8 BOM check done (.kiro/agents/)" -ForegroundColor Green
+} else {
+  Write-Host "[skip] no .kiro/agents/ directory — UTF-8 BOM check skipped" -ForegroundColor DarkGray
+}
+
+# 8. ESP residue (allowed only in templates/examples/ and the blank template tech-stack examples)
 $espPattern = 'esp-system|com\.tgl|PremiumConst|reissuebyESP|esp\.job\.'
 $hits = Get-ChildItem -Recurse -File $Root -Include *.md,*.json,*.css |
   Where-Object { $_.FullName -notmatch 'templates[\\/]examples' } |

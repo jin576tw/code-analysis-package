@@ -3,6 +3,18 @@
 All notable changes to this plugin are documented here.
 This project adheres to [Semantic Versioning](https://semver.org).
 
+## [0.4.0] - 2026-06-19
+
+### Added
+- **UTF-8 BOM safety check for Kiro agents (P13)**: `scripts/validate-plugin.ps1`
+  now includes Check 7 that reads the first 3 bytes of every `.kiro/agents/*.json`
+  and warns when a UTF-8 BOM (`EF BB BF`) is detected. kiro-cli (serde_json) does
+  not tolerate BOMs and fails silently at runtime; PowerShell's own JSON parser
+  does not catch this. Skipped automatically when no `.kiro/` directory is present
+  under the plugin root.
+- **marketplace.json version sync (P14)**: `marketplace.json` plugin entry version
+  updated from `0.1.0` to `0.4.0` to stay in sync with `plugin.json`.
+
 ## [0.3.0] - 2026-06-18
 
 ### Added
