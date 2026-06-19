@@ -1,0 +1,53 @@
+---
+description: Verify an existing SD.md against the real code and compute diff_rate. Standalone verification; runs vspec-mock + vspec-e2e → vspec-static → vspec-report, then asks whether to re-run the full analysis pipeline if diff_rate > 10%.
+argument-hint: <FeatureName>
+---
+
+# /verify-code
+
+**Target**: `$ARGUMENTS`
+
+If `$ARGUMENTS` is empty, ask the user for the feature name before continuing.
+
+## Orchestration
+
+You are the verification orchestrator running in the main conversation context.
+You **do not verify yourself** — sub-agents do. You handle: input resolution, run-state init, sub-agent dispatch, gates, diff_rate post-processing, Y/N re-entry decision, and run summary.
+
+### Step 0 — Resolve input
+
+Get `FUNCTION_NAME` (required) and optional `doc_root` (else search `<docs_root>` for the function dir from the profile card). Confirm SD.md is readable; if not, stop: "❌ Cannot find SD.md for <FUNCTION_NAME>." Determine module + entry_point + entry_type from SD.md / DEPENDENCIES.md.
+
+### Step 1 — Harness init
+
+`run_id = <timestamp>-verify-<feature>`. Create `<harness_dir>/<run_id>/`. Copy `${CLAUDE_PLUGIN_ROOT}/templates/harness/verify-state.json` → state.json and fill it; write `handoff-init-to-mock.md` and `handoff-init-to-e2e.md` (doc_root, feature, module, entry_point). Read back to verify; on failure stop. Always: read whole file → modify in memory → write back whole.
+
+### Step 2 — Parallel [mock, e2e]
+
+Dispatch `vspec-mock` ‖ `vspec-e2e` (single batch of Task calls). vspec-e2e self-skips for non-UI entry points. Gate: mock done + gate_passed, e2e done or skipped, both handoffs present. Retry only the failed one ≤2.
+
+### Step 3 — static
+
+Dispatch `vspec-static`; gate: static done + handoff-static-to-report present. Retry ≤2.
+
+### Step 4 — report
+
+Dispatch `vspec-report`; confirm report done, `diff_rate` set, and `<doc_root>/SD-review.md` exists.
+
+### Step 5 — diff_rate threshold + Y/N re-entry
+
+- `diff_rate ≤ 0.10` → deliver report; go to Step 6.
+- `diff_rate > 0.10` → list top ❌/⚠️ items (≤10), then ask:
+  > 重新分析？(y/n)
+
+  On **y**: read SD-review §5 (recommended fixes), build a change list, apply the analysis-orchestration impact matrix (≤3 stages affected → mode B; >3 → mode A). Then **continue inline** with the full analysis pipeline — proceed with Steps 4b through 6 of `/start-analysis` using the derived change list and mode. Do not stop or exit — the re-analysis is a continuation of the same conversation turn.
+
+  On **n**: deliver report only; go to Step 6.
+
+### Step 6 — Wrap up
+
+Write `<harness_dir>/<run_id>/summary.md` (feature, module, diff_rate, SD-review path, per-stage status, post-processing decision). Set state `status=done`, `ended_at`. Update the runs.md index row (status, last_stage, diff_rate, docs, ended): read whole → modify row in memory → write back whole. Final output: run_id, SD-review path, diff_rate, post-processing decision.
+
+## Failure handling
+
+If any sub-agent still fails after retry: set state `status=failed`, update the runs row, print `❌ verify-code failed at <stage>: <reason>`, stop (idempotent: re-running the same run_id overwrites).
