@@ -21,8 +21,8 @@ Apply the full orchestration logic from the **analysis-orchestration** skill and
 Read `${CLAUDE_PROJECT_DIR}/.analysis-profile.md`. Validate: (a) non-placeholder `docs_root`, (b) at least one filled module/layer row, (c) at least one checked entry-point type. If any field is blank or placeholder, stop:
 `❌ Profile incomplete — <field(s)> not set. Run /analysis-init to regenerate the profile card.`
 
-Scan `<harness_dir>/*/state.json` for incomplete runs (any stage status ∉ {done, skipped}; `running` = session-interrupted, treat as pending). If found, ask: resume / new / abandon.
-- **resume**: re-dispatch pending/running stages in DAG order (reset running → pending; do not increment retry_count).
+Scan `<harness_dir>/*/state.json` for incomplete runs (any stage status ∉ {done, skipped}; `running` = session-interrupted, treat as pending; `blocked` = session-limit hit, treat as pending). If found, ask: resume / new / abandon.
+- **resume**: re-dispatch pending/running/blocked stages in DAG order (reset to pending; do not increment retry_count).
 - **new**: fresh run_id.
 - **abandon**: mark non-{done,skipped} stages failed, status=partial, archive summary.md, continue with new run.
 
@@ -62,7 +62,15 @@ Dispatch in dependency order, passing `run_id`, `doc_root`, entry point and the 
 5. `sd`
 6. `api-contract` — WS/API only (else skipped) → `sa`
 
-After each worker: read state.json stage. On failed + retry_count < 2, re-dispatch; on second failure, stop that branch and report. Track low-confidence stages (confidence == "low") for summary.
+After each worker: read state.json stage.
+- If the Task result text contains "session limit" or "resets" (platform quota hit):
+  set stage `status=blocked` in state.json (**do NOT increment retry_count** — blocked ≠
+  logical failure). Pause DAG and report:
+  `⏸ DAG paused — subagent session limit. Stage <name> blocked. Resume with /start-analysis after reset.`
+- On `status=failed` and retry_count < 2: re-dispatch.
+- On second failure: stop that branch and report.
+- On `status=blocked`: do not retry automatically; wait for human to resume.
+Track low-confidence stages (confidence == "low") for summary.
 
 ### 5.5. Auto-verify phase
 

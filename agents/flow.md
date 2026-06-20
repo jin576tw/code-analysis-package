@@ -27,6 +27,13 @@ Layer-N worker. Do not modify skill files or templates. No secrets.
    draw user-operation, method-call, branching, transaction-boundary,
    error-handling and external-interaction diagrams (mermaid; ASCII fallback);
    attach reasoning notes for every non-intuitive conclusion. Trace to real code.
+   ⚠️ HARD RULE — complex logic quoting: for any method body that contains
+   multi-step logic (merge, filter, iterator, conditional branch, transformation
+   pipeline), **embed the relevant source lines (≤15 lines) verbatim** in the
+   Reasoning notes under a `[CODE <file>:<start>-<end>]` label. Do NOT paraphrase
+   multi-step logic — summary text loses semantics (e.g. direction of removeIf,
+   condition order in merge). Paraphrased descriptions must be marked ⚠️ LOW
+   confidence and added to pending_review.
 3. **Write** `<docs_root>/<MODULE>/<FEATURE>/<PAGE>/<FUNCTION>/FLOWCHART.md` per
    the skill's output format + human-review section.
 4. **Handoff (orchestration only)**: update state.json; write

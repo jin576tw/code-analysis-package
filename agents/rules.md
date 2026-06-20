@@ -26,6 +26,13 @@ correct Layer-N worker. Do not modify skill files or templates. No secrets.
    data-consistency vs implementation detail); Given-When-Then for core rules;
    track inference source + confidence; flag behaviour-comment conflicts. Trace
    to real code.
+   ⚠️ HARD RULE — CR/VR source citation: for every Constraint Rule (CR) or
+   Validation Rule (VR) trigger condition, **read the actual source line** and
+   cite it as `file:line`; do NOT derive conditions solely from FLOWCHART.md or
+   handoff summaries. If the condition references enum constants, list values, or
+   multi-field boolean expressions, embed the code fragment verbatim. Missing
+   details from summaries (e.g. `finalFlag==Y`, enum variant `TEMP_REJECT`) are a
+   common source of wrong items in SD verification.
 3. **Write** `<docs_root>/<MODULE>/<FEATURE>/<PAGE>/<FUNCTION>/BUSINESS-RULES.md`
    per the skill's output format + human-review section (include all conflicts).
 4. **Handoff (orchestration only)**: update state.json; write

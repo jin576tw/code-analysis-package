@@ -3,6 +3,27 @@
 All notable changes to this plugin are documented here.
 This project adheres to [Semantic Versioning](https://semver.org).
 
+## [0.5.0] - 2026-06-20
+
+### Changed
+- **funcs HARD RULE — complete method signatures (P15)**: `funcs.md` Procedure step 2
+  now includes a hard rule requiring workers to read every method's actual source
+  declaration line; parameter types must not be inferred from call sites or summaries.
+  Overloads must each be listed separately. Unlocatable signatures → confidence=low +
+  pending_review. Prevents signature simplification that caused SD diff_rate spikes.
+- **flow HARD RULE — complex-logic code quoting (P16)**: `flow.md` Procedure step 2
+  requires verbatim source embedding (≤15 lines) for any method body with multi-step
+  logic (merge, filter, iterate, branch, transform). Paraphrase distorts semantics;
+  paraphrased items must be marked ⚠️ LOW confidence and added to pending_review.
+- **rules HARD RULE — CR/VR source citation (P17)**: `rules.md` Procedure step 2
+  requires reading and citing the actual source line for every CR/VR trigger condition;
+  deriving conditions from FLOWCHART summaries alone is prohibited. Enum constants,
+  list values, and multi-field boolean expressions must be embedded verbatim.
+- **session limit `blocked` state (P18)**: `start-analysis.md` §5 now distinguishes
+  "session limit" platform errors from logical stage failures. Affected stage gets
+  `status=blocked` (no retry_count increment); DAG pauses with a clear resume message.
+  §1 startup treats `blocked` same as `running` (resume-eligible, no retry_count bump).
+
 ## [0.4.0] - 2026-06-19
 
 ### Added

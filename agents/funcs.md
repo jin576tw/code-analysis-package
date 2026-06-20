@@ -27,6 +27,12 @@ the correct Layer-N worker. Do not modify skill files or templates. No secrets.
    transaction, accessed storage + op, external calls, complexity); for high/
    medium complexity add the in-method flowchart + storage/job impact matrix.
    Trace to real code; flag unconfirmable items.
+   ⚠️ HARD RULE — method signatures: for every method in the call chain, **read
+   the actual source declaration line** (do NOT infer parameters from call-site
+   usage, handoff summaries, or comments). Record all parameter names + exact
+   declared types. If a method has overloads, list each signature separately.
+   Set confidence=low and add to pending_review for any signature you could not
+   directly locate and read.
 3. **Write** `<docs_root>/<MODULE>/<FEATURE>/<PAGE>/<FUNCTION>/FUNCTION-LIST.md`
    per the skill's output format + human-review section.
 4. **Handoff (orchestration only)**: update state.json; write
