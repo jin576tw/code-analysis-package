@@ -12,6 +12,29 @@ End-to-end pipeline that produces up to 10 analysis documents for a feature.
 > (§10). If absent, run `analysis-init` first (or auto-detect). **Load skill
 > `analysis-conventions`.**
 
+## §11 Dual-pass override (profile card §11 present)
+
+When the profile card contains a **§11** section defining a dual-pass protocol,
+execute the full 10-document pipeline **twice** instead of once:
+
+**Pass 1 — frontend tier** (parameters from §11):
+- Scope: frontend entry points (e.g. `adp-gi-ui/pages/**`) + components/mixins/store
+- SA skill: `sa` (UI general)
+- Output path: append `/frontend/` subdirectory to the §7 path convention
+- Do NOT produce API-CONTRACT
+
+**Pass 2 — backend tier**:
+- Entry point: API endpoints discovered at Pass 1 exit boundary
+- Scope: backend service (e.g. `adp-policy/`)
+- SA skill: `sa-api`
+- Output path: append `/backend/` subdirectory to the §7 path convention
+- MUST produce API-CONTRACT
+
+Execution order: complete Pass 1 fully before starting Pass 2.
+Pass 1 endpoint list (from `this.$axios.$get/$post('...')` calls) is Pass 2's entry input.
+
+If §11 is absent in the profile card, use the standard single-pass pipeline below.
+
 ## Document set (max 10)
 
 | # | Document | Skill | Layer | Applies |
@@ -72,6 +95,8 @@ Layer 4b:  api-contract (WS/API only) → sa   (depend on ⑦⑤⑥)
 | **C** Cross-feature overview | "X module overview" | produce `_global/<feature>-<entry>-overview/` docs |
 
 ### Mode B change-impact matrix
+> **Tip**: For localised SD omissions/errors found by `verify-spec`, use `vspec-patch` first — it patches docs directly without re-analysing. Reserve Mode B/A for widespread or structural changes where doc structure itself needs regenerating.
+
 Ask the user for an explicit change list (do **not** auto-diff). Filter stages:
 
 | Change type | ①dep | ②var | ③erd | ④fn | ⑤flow | ⑥rule | ⑦sd | ⑧a | ⑧bSA |

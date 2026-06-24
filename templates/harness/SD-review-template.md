@@ -1,3 +1,9 @@
+---
+verify_round: N
+threshold: 0.XX
+prior_diff_rate: null
+---
+
 # <FUNCTION_NAME> — SD Review (SD-review)
 
 > Review date: YYYY-MM-DD
@@ -18,11 +24,13 @@
 | ⚠️ Omission (code has it, SD doesn't) | N (X%) |
 | ❌ Wrong (SD contradicts code) | N (X%) |
 | **diff_rate (omission + wrong)** | **N items, X%** |
+| Resolved threshold (round N) | X.XX (XX%) |
 | E2E UI diffs (UI entry points only) | N / N/A (non-UI) |
 
 > Formula: `diff_rate = (❌ wrong + ⚠️ omission) / total reviewed items`.
 > Mode B (linked-update): denominator is only items in the re-analysed stages.
-> When diff_rate > 10%, the orchestrator asks whether to re-enter start-analysis.
+> Threshold tightens by verify_round: round 1=0.20, round 2=0.15, round ≥3=0.10.
+> When diff_rate > resolved threshold, the orchestrator recommends optional full re-analysis.
 
 ---
 
@@ -73,8 +81,8 @@
 
 ## §5 Recommended fixes
 
-> Read-only review; it does not edit existing docs. When diff_rate > 10% the
-> orchestrator offers to re-enter start-analysis (code is the source of truth).
+> Localised omissions and errors are patched back by `vspec-patch` (code is the source of truth).
+> When diff_rate > resolved threshold, the orchestrator may optionally trigger full re-analysis.
 
 | Priority | Diff id | Fix action | Affected SD section |
 |----------|---------|------------|---------------------|

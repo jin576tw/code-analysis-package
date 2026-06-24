@@ -1,5 +1,5 @@
 {
-  "_schema_version": "1.0",
+  "_schema_version": "1.1",
   "run_id": "<timestamp>-<feature>",
   "feature": "<feature>",
   "entry_point": "<entry point description>",
@@ -11,6 +11,9 @@
   "status": "running",
   "re_analysis_count": 0,
   "diff_rate": null,
+  "verify_round": 1,
+  "threshold": 0.20,
+  "patch_mode": "pipeline",
   "stages": [
     { "name": "batch-analysis", "status": "skipped", "retry_count": 0, "doc_path": null, "confidence": null, "pending_review": [], "started_at": null, "ended_at": null, "error": null },
     { "name": "deps",         "status": "pending", "retry_count": 0, "doc_path": null, "confidence": null, "pending_review": [], "started_at": null, "ended_at": null, "error": null },
@@ -26,6 +29,7 @@
     { "name": "vspec-mock",   "status": "pending", "retry_count": 0, "started_at": null, "ended_at": null, "error": null },
     { "name": "vspec-e2e",    "status": "pending", "retry_count": 0, "started_at": null, "ended_at": null, "error": null },
     { "name": "vspec-static", "status": "pending", "retry_count": 0, "started_at": null, "ended_at": null, "error": null },
-    { "name": "vspec-report", "status": "pending", "retry_count": 0, "diff_rate": null,  "started_at": null, "ended_at": null, "error": null }
+    { "name": "vspec-report", "status": "pending", "retry_count": 0, "diff_rate": null, "sd_review_path": null, "started_at": null, "ended_at": null, "error": null },
+    { "name": "vspec-patch",  "status": "pending", "retry_count": 0, "patch_plan_path": null, "patched": [], "deferred": [], "confirmed": null, "started_at": null, "ended_at": null, "error": null }
   ]
 }

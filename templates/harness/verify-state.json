@@ -1,6 +1,6 @@
 {
   "_comment": "verify-run state.json template. Copied and filled by the verify-spec orchestrator at init.",
-  "_schema_version": "1.0",
+  "_schema_version": "1.1",
 
   "run_id": "<timestamp>-verify-<feature>",
   "feature": "<function_name>",
@@ -11,6 +11,11 @@
   "started_at": null,
   "ended_at": null,
   "status": "running",
+
+  "verify_round": 1,
+  "threshold": 0.20,
+  "prior_diff_rate": null,
+  "patch_mode": "standalone",
 
   "stages": {
     "mock": {
@@ -36,16 +41,28 @@
       "gate_passed": false, "pending_review": [], "retry_count": 0, "error": null,
       "diff_rate": null, "sd_review_path": null,
       "_depends_on": ["static", "e2e"]
+    },
+    "patch": {
+      "status": "pending", "started_at": null, "ended_at": null,
+      "handoff_in": null, "patch_plan_path": null,
+      "patched": [], "deferred": [], "confirmed": null,
+      "retry_count": 0, "error": null,
+      "_depends_on": ["report"],
+      "_skip_when": "diff_rate == 0"
     }
   },
 
   "_legend": {
     "status_values": ["pending", "running", "done", "failed", "skipped"],
     "confidence_values": ["high", "medium", "low"],
-    "diff_rate": "float 0.0-1.0, (wrong + omission) / total items; >0.1 -> orchestrator asks whether to regenerate",
+    "diff_rate": "float 0.0-1.0, (wrong + omission) / total items; > threshold(verify_round) -> orchestrator recommends optional re-analysis",
+    "verify_round": "1-based count of times this SD has been verified; drives adaptive threshold",
+    "threshold_schedule": "round 1=0.20, round 2=0.15, round>=3=0.10; controls re-analysis advisory only — patching always runs when diffs exist",
+    "patch_mode": "standalone (list-then-confirm) | pipeline (auto-apply)",
     "gate_passed": "true = write-back read verification passed, downstream may proceed",
     "parallel_batch_1": ["mock", "e2e"],
     "sequential_after_mock": "static",
-    "converge": "report"
+    "converge": "report",
+    "post_report": "patch"
   }
 }

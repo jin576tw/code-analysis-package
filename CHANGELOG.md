@@ -3,6 +3,37 @@
 All notable changes to this plugin are documented here.
 This project adheres to [Semantic Versioning](https://semver.org).
 
+## [0.6.0] - 2026-06-24
+
+### Added
+- **vspec-patch agent (P19)**: new `agents/vspec-patch.md` sub-agent that reads
+  `SD-review.md §2` D-XX entries, classifies each as `patchable-localized` or
+  `structural-defer`, maps to target docs (SD.md + clearly-owned sibling), and
+  applies fixes inline. Code is the source of truth; every change cites a real
+  code line. Produces `patch-plan.md` in the run dir.
+- **Patch-first post-processing (P20)**: `start-analysis §5.6` and `verify-spec §5`
+  now dispatch `vspec-patch` immediately after `vspec-report` instead of
+  auto-triggering a full re-analysis. Pipeline mode auto-applies; standalone mode
+  presents `patch-plan.md` and waits for confirmation.
+- **Adaptive diff_rate threshold (P21)**: threshold for re-analysis recommendation
+  is now `verify_round`-dependent (round 1 → 0.20, round 2 → 0.15, ≥3 → 0.10).
+  `verify_round` is resolved from `SD-review.md` frontmatter and stored in
+  `state.json`; passed to `vspec-report` for §1 display.
+- **verify_round tracking (P22)**: `state.json` and `verify-state.json` schemas
+  bumped to `1.1`, adding `verify_round`, `threshold`, `patch_mode` at run level
+  and a `patch` stage entry. `runs.md` gains a `verify_round` column.
+- **Advisory-only re-analysis (P23)**: `start-analysis §5.6` no longer
+  auto-triggers re-analysis when `diff_rate > threshold`. Instead it records an
+  advisory in `summary.md` and `runs.md`. `re_analysis_count` is retained for
+  opt-in tracking only.
+
+### Changed
+- **verify-spec description**: updated to reflect patch-first pipeline with
+  adaptive threshold.
+- **start-analysis description**: now lists `vspec-patch` in the worker sequence.
+- **SD-review-template.md**: YAML frontmatter block added (`verify_round`,
+  `threshold`, `prior_diff_rate`); "Resolved threshold (round N)" row added to §1.
+
 ## [0.5.0] - 2026-06-20
 
 ### Changed

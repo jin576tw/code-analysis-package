@@ -10,7 +10,7 @@
       "name": "code-analysis-package",
       "source": "./",
       "description": "Layered code analysis + spec verification toolkit, decoupled from any single project via a per-project profile card.",
-      "version": "0.4.0"
+      "version": "0.6.0"
     }
   ]
 }

@@ -1,6 +1,6 @@
 ---
 name: verify-spec
-description: Spec-vs-code verification. Checks an analysis SD.md against the real code via three-layer comparison (mock ↔ real code ↔ SD) plus optional dynamic UI verification, converging into SD-review.md with a diff_rate. Runs automatically as the final phase of start-analysis (after sa); also manually triggerable as a standalone verify-spec orchestrator.
+description: Spec-vs-code verification. Checks an analysis SD.md against the real code via three-layer comparison (mock ↔ real code ↔ SD) plus optional dynamic UI verification, converging into SD-review.md with diff_rate. Applies targeted patches (vspec-patch) back into SD.md and sibling docs; re-analysis is optional and triggered only when diff_rate > adaptive threshold. Runs automatically as the final phase of start-analysis (after sa); also manually triggerable as a standalone verify-spec orchestrator.
 ---
 
 # Verify Spec (SD ↔ code verification)
@@ -19,7 +19,7 @@ analysis docs — it reports differences, it does not silently edit them.
 
 ## Pipeline (mini-orchestrator)
 ```
-init → [ mock ‖ e2e ] → static → report → diff_rate threshold post-processing
+init → [ mock ‖ e2e ] → static → report → patch → [optional: full re-analysis]
 ```
 - **mock**: read SD.md and generate a code mock skeleton **faithful to the SD**
   (including any errors the SD describes) into the run's `mock/` dir. This makes
@@ -34,10 +34,21 @@ init → [ mock ‖ e2e ] → static → report → diff_rate threshold post-pro
   `diff_rate = (❌ wrong + ⚠️ omission) / total reviewed items`.
 
 ## diff_rate post-processing
-- `diff_rate ≤ 0.10` → deliver the report only.
-- `diff_rate > 0.10` → list the top differences and ask the user whether to
-  re-enter `start-analysis` to regenerate docs (mode B for localised diffs,
-  mode A if widespread). Code is the source of truth.
+- `diff_rate == 0` → deliver report; done.
+- `diff_rate > 0` → dispatch `vspec-patch` (code is the source of truth):
+  - **Standalone mode**: present `patch-plan.md` to user; apply on confirmation.
+  - **Pipeline mode** (start-analysis): auto-apply; log in summary.md.
+- After patch, if `diff_rate > threshold(verify_round)`:
+  - **Standalone**: ask user to optionally trigger full re-analysis (default: no).
+  - **Pipeline**: record advisory in summary.md; no auto re-analysis.
+
+## Adaptive threshold (verify_round)
+| verify_round | threshold |
+|---|---|
+| 1 | 0.20 |
+| 2 | 0.15 |
+| ≥3 | 0.10 |
+Threshold controls the re-analysis recommendation only; patching always runs when diffs exist.
 
 ## SD-review.md structure
 Use `${CLAUDE_PLUGIN_ROOT}/templates/harness/SD-review-template.md`:
@@ -58,5 +69,6 @@ real-code snippet+line, explanation, impact), §3 confirmed-correct table,
 - [ ] mock skeleton faithful to SD (errors included, not silently fixed).
 - [ ] static comparison classifies every item ✅/⚠️/❌ with code evidence.
 - [ ] e2e run only for UI entry points (else N/A).
-- [ ] diff_rate computed by the formula; report does not edit existing docs.
-- [ ] post-processing offers re-entry into start-analysis when diff_rate > 10%.
+- [ ] diff_rate computed by the formula; vspec-report does not edit existing docs.
+- [ ] vspec-patch dispatched (or skipped if diff_rate == 0); patch-plan.md produced.
+- [ ] re-analysis triggered only if diff_rate > threshold(verify_round) AND user opts in (standalone) or advisory logged (pipeline).

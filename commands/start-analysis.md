@@ -1,5 +1,5 @@
 ---
-description: Run the full code-analysis pipeline (deps → vars/erd/funcs → flow → rules → sd → sa → verify) for a feature or entry-point. Reads .analysis-profile.md; run /analysis-init first if not present.
+description: Run the full code-analysis pipeline (deps → vars/erd/funcs → flow → rules → sd → sa → verify → patch) for a feature or entry-point. Reads .analysis-profile.md; run /analysis-init first if not present.
 argument-hint: <FeatureOrEntryPoint>
 ---
 
@@ -18,7 +18,14 @@ Apply the full orchestration logic from the **analysis-orchestration** skill and
 
 ### 1. Profile & startup
 
-Read `${CLAUDE_PROJECT_DIR}/.analysis-profile.md`. Validate: (a) non-placeholder `docs_root`, (b) at least one filled module/layer row, (c) at least one checked entry-point type. If any field is blank or placeholder, stop:
+Read `${CLAUDE_PROJECT_DIR}/.analysis-profile.md`. Validate:
+(a) non-placeholder `docs_root`,
+(b) at least one filled module/layer row,
+(c) at least one checked entry-point type,
+(d) no absolute paths (no `C:\`, `/home/`, `C:/`, `D:\`, `/Users/` etc.) — if found, stop:
+`❌ Profile contains absolute paths — please use relative paths only (relative to repo root). Run /analysis-init to regenerate.`
+
+If any field is blank or placeholder, stop:
 `❌ Profile incomplete — <field(s)> not set. Run /analysis-init to regenerate the profile card.`
 
 Scan `<harness_dir>/*/state.json` for incomplete runs (any stage status ∉ {done, skipped}; `running` = session-interrupted, treat as pending; `blocked` = session-limit hit, treat as pending). If found, ask: resume / new / abandon.
@@ -40,14 +47,16 @@ Determine MODULE/FEATURE/PAGE and entry-point type from the profile module/layer
 
 ### 4. Run-state init
 
-`run_id = <timestamp>-<feature>`. Create `<harness_dir>/<run_id>/state.json` (all stages pending, including vspec-*; `re_analysis_count=0`, `diff_rate=null`). Write `handoff-init-to-deps.md`. Use templates from `${CLAUDE_PLUGIN_ROOT}/templates/harness/`. Always: read whole file → modify in memory → write back whole.
+`run_id = <timestamp>-<feature>`. Create `<harness_dir>/<run_id>/state.json` (all stages pending, including vspec-* and vspec-patch; `re_analysis_count=0`, `diff_rate=null`). Resolve `verify_round`: read `<doc_root>/SD-review.md` frontmatter field `verify_round`; default 0 if absent or file not found; this run's round = prior + 1. Resolve `threshold`: round 1 → 0.20, round 2 → 0.15, round ≥3 → 0.10. Write `verify_round`, `threshold`, `patch_mode="pipeline"` into state.json. Write `handoff-init-to-deps.md`. Use templates from `${CLAUDE_PLUGIN_ROOT}/templates/harness/`. Always: read whole file → modify in memory → write back whole.
+
+**doc_root portability**: store `doc_root` in `state.json` as a **relative path** (relative to repo root) — not an absolute path. Resolve to absolute only when constructing the actual filesystem path for writing a file.
 
 ### 4b. runs.md gate
 
 **Must complete before dispatching any worker.**
 
 1. If `<harness_dir>/runs.md` does not exist → create it from `${CLAUDE_PLUGIN_ROOT}/templates/harness/runs.md`.
-2. Append run row (run_id, feature, entry_type, mode, started ISO, status=running, re_analysis_count=0, last_stage=—, diff_rate=—, docs=0/N, ended=—).
+2. Append run row (run_id, feature, entry_type, mode, started ISO, status=running, re_analysis_count=0, last_stage=—, diff_rate=—, verify_round=N, docs=0/N, ended=—).
 3. Immediately read back `runs.md`; verify the row with this run_id is present and status=running.
    - ✅ `[GATE] runs.md verified — starting DAG` → continue.
    - ❌ `[GATE] ⚠️ runs.md write failed: <reason> — harness tracking degraded` → continue (best-effort).
@@ -78,30 +87,28 @@ Runs immediately after `sa` completes:
 7. `vspec-mock` ‖ `vspec-e2e` — parallel (vspec-e2e self-skips for non-UI). Pass: run_id, doc_root, entry_point, entry_type.
 8. `vspec-static` — after both done/skipped.
 9. `vspec-report` — after static done; writes SD-review.md, sets diff_rate + sd_review_path in state.json.
+10. `vspec-patch` — after report done; **pipeline mode** (auto-applies). Pass: run_id, doc_root. Skip if diff_rate == 0. Retry ≤2.
 
 Same retry rule (≤2) applies to each vspec worker.
 
-### 5.6. diff_rate gate (runs once)
+### 5.6. diff_rate post-patch assessment
 
-Read `diff_rate` from state.json after vspec-report completes.
+Read `diff_rate` and `threshold` from state.json after vspec-patch completes.
 
-- **≤ 0.10** → proceed to Step 6.
-- **> 0.10 and `re_analysis_count == 0`**:
-  a. Parse SD-review §5 (recommended fixes) to build a change list.
-  b. Apply the analysis-orchestration impact matrix.
-  c. ≤3 stages affected → mode B; >3 stages → mode A.
-  d. Set `re_analysis_count = 1` in state.json.
-  e. Re-run affected stages (reset to pending, normal DAG order and retry rules).
-  f. Re-run full auto-verify phase (§5.5) on the updated SD.md.
-  g. Proceed to Step 6 with updated diff_rate.
-- **> 0.10 and `re_analysis_count == 1`**: Report "⚠️ diff_rate still X.X% after one re-analysis cycle. Manual review of SD-review.md is required." → proceed to Step 6.
+- **diff_rate == 0** → proceed to Step 6.
+- **diff_rate > 0 and `diff_rate ≤ threshold`** → proceed to Step 6. Patches applied; within acceptable range for verify_round N.
+- **diff_rate > threshold** → record advisory in summary.md and runs.md row:
+  `⚠️ diff_rate X.X% > threshold Y.Y% (verify_round N). Patches applied. Recommend human review of SD-review.md; consider manual re-analysis if structural issues suspected.`
+  Proceed to Step 6. **Do not auto-trigger re-analysis.**
+
+> `re_analysis_count` is retained for opt-in tracking; it is no longer incremented automatically.
 
 ### 6. Summary
 
-Write `<harness_dir>/<run_id>/summary.md`: stage list with status/doc paths/confidence/pending-review totals, low-confidence stages (⚠️ prefix), spec quality block (diff_rate ✅/⚠️, SD-review path, re-analysis decision). If re-analysis was performed, append this block verbatim:
+Write `<harness_dir>/<run_id>/summary.md`: stage list with status/doc paths/confidence/pending-review totals, low-confidence stages (⚠️ prefix), spec quality block (diff_rate ✅/⚠️, SD-review path, verify_round, threshold, patch summary: N patched / M deferred / patch_plan_path). If `diff_rate > threshold`, include the advisory note. Always append this block verbatim:
 
 ```
-⚠️ 決策執行一致性：本次執行了自動重分析，請 grep skills/ 與 agents/ 確認
+⚠️ 決策執行一致性：請 grep skills/ 與 agents/ 確認
 無舊做法或硬編碼殘留，避免「決策寫了但 prompt 未更新」的執行脫節。
 ```
 
