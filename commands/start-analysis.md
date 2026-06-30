@@ -49,11 +49,22 @@ Determine MODULE/FEATURE/PAGE and entry-point type from the profile module/layer
 ```
 doc_root = <docs_root>/<MODULE>/<FEATURE>/<PAGE>/<tier>
 ```
-- `<PAGE>` = 選單功能名（`feature` 引數的最後一段路徑，即葉節點名稱），**永遠不得省略**。
-- 若 `feature` 引數只有 2 段（MODULE/FEATURE，無 PAGE），**停止**並詢問使用者缺少的選單功能名後再繼續。
-- `<tier>` 只能是 `frontend` 或 `backend`，排在 PAGE 之後，絕不能直接接在 FEATURE 之後。
+
+**路徑推導規則（對照畫面結構，不得自行發明名稱）**：
+
+1. 先讀 `adp-gi-ui/layouts/default.vue` 確認 `<MODULE>`（主選單）與 `<FEATURE>`（子選單 / 畫面標題）。
+2. `<PAGE>` 必須反映**實際畫面的 Tab / Sub-Tab 層級**，使用 `-` 連接多層：
+   - 若該 Vue 檔案是某 Tab 的子頁籤：`<父Tab>-<子Tab>`（例：`核保審核-檢核不通過`）
+   - 若是獨立功能頁：直接用畫面標題或選單名稱（例：`收據列印管理`）
+3. `<PAGE>` **永遠不得省略**；`<tier>` 只能是 `frontend` 或 `backend`，排在 PAGE 之後。
+4. 若 feature 引數的 PAGE 段不明確，**先讀截圖或畫面 SA.md 確認 Tab 結構，再決定命名**；若仍無法確認，停止並詢問使用者。
+
+範例：
+- `uw_fail.vue`（核保審核 Tab → 檢核不通過 Sub-Tab）→ `新契約作業/承保受理作業/核保審核-檢核不通過/frontend`
+- `insuredEmployee.vue`（從 檢核不通過 點「編輯」進入）→ `新契約作業/承保受理作業/核保審核-員工核保審核/frontend`
 - ❌ 錯誤：`<docs_root>/<MODULE>/<FEATURE>/<tier>` （丟失 PAGE 層）
-- ✅ 正確：`<docs_root>/<MODULE>/<FEATURE>/<PAGE>/<tier>`
+- ❌ 錯誤：自行命名 PAGE（如「受理作業照會」），未對照 default.vue 或畫面
+- ✅ 正確：`<docs_root>/<MODULE>/<FEATURE>/<PAGE>/<tier>`，PAGE 來自畫面 Tab 結構
 
 ### 4. Run-state init
 

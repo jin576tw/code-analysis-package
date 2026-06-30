@@ -58,10 +58,15 @@ If §11 is absent in the profile card, use the standard single-pass pipeline bel
 | Pure batch (no UI) | sa-batch |
 
 ## Output-path determination
-`<docs_root>/<MODULE>/<FEATURE>/<PAGE>/<FUNCTION_NAME>/<TYPE>.md` (defaults +
-convention from profile §7). Derive MODULE/FEATURE/PAGE from the profile
-module/layer map by entry-point type. Merge PAGE+FUNCTION into one level when
-identical. Cross-feature overviews go under `<docs_root>/_global/<feature>-<entry>-overview/`.
+`<docs_root>/<MODULE>/<FEATURE>/<PAGE>/<tier>/<TYPE>.md`
+
+**PATH DERIVATION — must follow actual UI structure, not invented names:**
+1. `<MODULE>` = 主選單名稱（from `adp-gi-ui/layouts/default.vue`）
+2. `<FEATURE>` = 子選單 / 畫面標題（from `default.vue` → `to` route → page `<h1>` or breadcrumb）
+3. `<PAGE>` = 畫面 Tab 層級，用 `-` 連接多層（e.g. `核保審核-檢核不通過`）；若為獨立功能頁則直接用功能名稱；**不得自行發明、不得省略**
+4. When PAGE = FUNCTION_NAME (leaf is the page itself), merge into one level; do not add extra sub-dir.
+
+Cross-feature overviews go under `<docs_root>/_global/<feature>-<entry>-overview/`.
 
 ## Layered DAG
 ```
