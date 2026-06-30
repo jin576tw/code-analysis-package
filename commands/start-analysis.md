@@ -45,6 +45,16 @@ Scan `<harness_dir>/*/state.json` for incomplete runs (any stage status ∉ {don
 
 Determine MODULE/FEATURE/PAGE and entry-point type from the profile module/layer map. Add `batch-analysis` as first stage if batch entry type (else skipped). Ensure `deps` invokes the `batch-analysis` skill as part of its analysis.
 
+**doc_root 公式**（必須嚴格遵守）：
+```
+doc_root = <docs_root>/<MODULE>/<FEATURE>/<PAGE>/<tier>
+```
+- `<PAGE>` = 選單功能名（`feature` 引數的最後一段路徑，即葉節點名稱），**永遠不得省略**。
+- 若 `feature` 引數只有 2 段（MODULE/FEATURE，無 PAGE），**停止**並詢問使用者缺少的選單功能名後再繼續。
+- `<tier>` 只能是 `frontend` 或 `backend`，排在 PAGE 之後，絕不能直接接在 FEATURE 之後。
+- ❌ 錯誤：`<docs_root>/<MODULE>/<FEATURE>/<tier>` （丟失 PAGE 層）
+- ✅ 正確：`<docs_root>/<MODULE>/<FEATURE>/<PAGE>/<tier>`
+
 ### 4. Run-state init
 
 `run_id = <timestamp>-<feature>`. Create `<harness_dir>/<run_id>/state.json` (all stages pending, including vspec-* and vspec-patch; `re_analysis_count=0`, `diff_rate=null`). Resolve `verify_round`: read `<doc_root>/SD-review.md` frontmatter field `verify_round`; default 0 if absent or file not found; this run's round = prior + 1. Resolve `threshold`: round 1 → 0.20, round 2 → 0.15, round ≥3 → 0.10. Write `verify_round`, `threshold`, `patch_mode="pipeline"` into state.json. Write `handoff-init-to-deps.md`. Use templates from `${CLAUDE_PLUGIN_ROOT}/templates/harness/`. Always: read whole file → modify in memory → write back whole.
