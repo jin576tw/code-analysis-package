@@ -16,6 +16,8 @@
    7. Every .kiro/agents/*.json is encoded UTF-8 without BOM (kiro-cli serde_json
       does not tolerate BOMs and fails silently at runtime).
    8. No project-specific hardcoding (checks for ESP/project residue).
+  9. verify-report naming and quality gate schema are present; legacy SD-review
+    references are fallback-only in active runtime files.
 
   Exit code 0 = all green; 1 = problems found.
 
@@ -138,6 +140,37 @@ foreach ($h in $hits) {
   $problems.Add("ESP residue in $($h.Path):$($h.LineNumber) -> $($h.Line.Trim())")
 }
 if (-not $hits) { Write-Host "[ok] no ESP-specific hardcoding outside templates/examples/" -ForegroundColor Green }
+
+# 9. verify-report naming + quality gate schema
+$verifyTemplate = Join-Path $Root 'templates/harness/verify-report-template.md'
+$oldSdTemplate = Join-Path $Root 'templates/harness/SD-review-template.md'
+if (-not (Test-Path $verifyTemplate)) { $problems.Add("Missing templates/harness/verify-report-template.md") }
+if (Test-Path $oldSdTemplate) { $problems.Add("Legacy templates/harness/SD-review-template.md should not exist; use verify-report-template.md") }
+
+$qualityAgent = Join-Path $Root 'agents/quality-score.md'
+if (-not (Test-Path $qualityAgent)) { $problems.Add("Missing agents/quality-score.md") }
+
+$stateTemplate = Join-Path $Root 'templates/harness/state.json'
+if (Test-Path $stateTemplate) {
+  $stateText = Get-Content -Raw $stateTemplate
+  foreach ($required in @('verify_report_path', 'quality_score', 'score_breakdown', 'score_attempts', 'quality_gate', 'repair_actions', 'gap_report_path')) {
+    if ($stateText -notmatch [regex]::Escape($required)) { $problems.Add("state.json missing '$required'") }
+  }
+  if ($stateText -match 'sd_review_path') { $problems.Add("state.json still uses sd_review_path") }
+}
+
+$activeDirs = @('agents', 'commands', 'skills', 'templates') | ForEach-Object { Join-Path $Root $_ } | Where-Object { Test-Path $_ }
+$badLegacy = Get-ChildItem -Recurse -File $activeDirs -Include *.md,*.json |
+  Where-Object { $_.FullName -notmatch 'CHANGELOG\.md$' } |
+  Select-String -Pattern 'SD-review-template|sd_review_path|SD-review\.md' |
+  Where-Object {
+    $_.Line -match 'SD-review-template|sd_review_path' -or
+    ($_.Line -match 'SD-review\.md' -and $_.Line -notmatch '(?i)legacy|fallback')
+  }
+foreach ($hit in $badLegacy) {
+  $problems.Add("Non-fallback SD-review reference in $($hit.Path):$($hit.LineNumber) -> $($hit.Line.Trim())")
+}
+Write-Host "[ok] verify-report naming / quality schema check done" -ForegroundColor Green
 
 # Report
 Write-Host ""

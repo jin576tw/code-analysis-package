@@ -4,5 +4,5 @@
 
 ## Runs
 
-| run_id | feature | entry_type | mode | started | status | re_analysis_count | last_stage | diff_rate | verify_round | docs | ended |
-|--------|---------|------------|------|---------|--------|-------------------|------------|-----------|--------------|------|-------|
+| run_id | feature | entry_type | mode | started | status | re_analysis_count | last_stage | diff_rate | verify_round | quality_min | failed_quality | docs | ended |
+|--------|---------|------------|------|---------|--------|-------------------|------------|-----------|--------------|-------------|----------------|------|-------|

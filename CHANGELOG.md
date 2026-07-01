@@ -3,6 +3,29 @@
 All notable changes to this plugin are documented here.
 This project adheres to [Semantic Versioning](https://semver.org).
 
+## [0.7.0] - 2026-07-01
+
+### Added
+- **quality-score agent**: adds a read-only per-stage quality gate with weighted
+  scoring (`score_10 >= 9.0`), same-stage repair flow, and structural gap reports.
+- **Quality schema fields**: `state.json` now tracks `quality_score`,
+  `score_breakdown`, `score_attempts`, `quality_gate`, `repair_actions`, and
+  `gap_report_path` for document stages, plus run-level `pending_human`,
+  `recommended_resume_mode`, and `affected_stages`.
+- **verify-report template**: new `templates/harness/verify-report-template.md`
+  includes quality gate summary, doc coverage matrix, patch class, and
+  recommended fixes sections.
+
+### Changed
+- **Verify artifact rename**: primary output is now `verify-report.md` with
+  `verify_report_path`; legacy `SD-review.md` is read only as fallback input.
+- **Orchestration gate**: `start-analysis` now dispatches `quality-score` after
+  every document-producing worker and blocks downstream stages on failed or
+  structural gates.
+- **Patch flow**: `vspec-patch` now reads `verify-report.md` §3/§6/§7 and treats
+  structural-defer items as human-gated instead of broad automatic rewriting.
+- **Metadata/version sync**: plugin and marketplace versions aligned to `0.7.0`.
+
 ## [0.6.0] - 2026-06-24
 
 ### Added

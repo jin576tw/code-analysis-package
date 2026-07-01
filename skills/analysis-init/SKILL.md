@@ -77,7 +77,7 @@ credential.
 ### Step 5 — Report
 - Summarise the card (project name, layer map, enabled entry types, output root).
 - List any TODO/unconfirmed fields.
-- Tell the user the next step: run `@start-analysis` for full analysis, or an
+- Tell the user the next step: run `/start-analysis` for full analysis, or an
   individual skill (e.g. `/dependency-analysis`).
 
 ## Fallback contract for other skills

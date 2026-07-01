@@ -1,6 +1,6 @@
 {
   "_comment": "verify-run state.json template. Copied and filled by the verify-spec orchestrator at init.",
-  "_schema_version": "1.1",
+  "_schema_version": "1.2",
 
   "run_id": "<timestamp>-verify-<feature>",
   "feature": "<function_name>",
@@ -15,6 +15,7 @@
   "verify_round": 1,
   "threshold": 0.20,
   "prior_diff_rate": null,
+  "legacy_report_path": null,
   "patch_mode": "standalone",
 
   "stages": {
@@ -39,7 +40,7 @@
       "status": "pending", "started_at": null, "ended_at": null, "confidence": null,
       "handoff_in": ["handoff-static-to-report.md", "handoff-e2e-to-report.md"], "handoff_out": null,
       "gate_passed": false, "pending_review": [], "retry_count": 0, "error": null,
-      "diff_rate": null, "sd_review_path": null,
+      "diff_rate": null, "verify_report_path": null, "legacy_report_path": null,
       "_depends_on": ["static", "e2e"]
     },
     "patch": {
@@ -55,7 +56,7 @@
   "_legend": {
     "status_values": ["pending", "running", "done", "failed", "skipped"],
     "confidence_values": ["high", "medium", "low"],
-    "diff_rate": "float 0.0-1.0, (wrong + omission) / total items; > threshold(verify_round) -> orchestrator recommends optional re-analysis",
+    "diff_rate": "float 0.0-1.0, (wrong + omission) / total items; > threshold(verify_round) -> orchestrator recommends human review and optional re-analysis",
     "verify_round": "1-based count of times this SD has been verified; drives adaptive threshold",
     "threshold_schedule": "round 1=0.20, round 2=0.15, round>=3=0.10; controls re-analysis advisory only — patching always runs when diffs exist",
     "patch_mode": "standalone (list-then-confirm) | pipeline (auto-apply)",
@@ -63,6 +64,7 @@
     "parallel_batch_1": ["mock", "e2e"],
     "sequential_after_mock": "static",
     "converge": "report",
-    "post_report": "patch"
+    "post_report": "patch",
+    "verify_report_path": "primary verify artifact path; legacy SD-review.md may be read only as fallback input"
   }
 }

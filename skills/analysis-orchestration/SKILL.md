@@ -83,6 +83,15 @@ Layer 4a:  sd                    (depends on ①④⑤)
 Layer 4b:  api-contract (WS/API only) → sa   (depend on ⑦⑤⑥)
 ```
 
+## Quality gate
+
+After every document-producing stage, run `quality-score` before allowing
+downstream stages to proceed. The stage passes only when `score_10 >= 9.0` and
+`quality_gate == "passed"`. Local defects may enter `repairing` and rerun the
+same stage once or twice; structural gaps set `pending_human=true`, write
+`<stage>-gap-report.md`, and block affected downstream stages until a human
+chooses the resume mode.
+
 ## Execution steps
 - **Step 0 — path & entry type**: determine MODULE/FEATURE/PAGE and entry-point
   type. For a batch entry point, run `batch-analysis` first.
@@ -90,7 +99,10 @@ Layer 4b:  api-contract (WS/API only) → sa   (depend on ⑦⑤⑥)
 - **Step 2 — completeness**: existing docs → check against the skill's self-check;
   incomplete → top up; complete → reuse as input.
 - **Step 3 — produce missing docs in layer order** (per the DAG).
-- **Step 4 — summary**: output a run summary.
+- **Step 3.5 — quality gate**: after each produced doc, run `quality-score` and
+  stop on `failed_local`, `failed_structural`, or `pending_human`.
+- **Step 4 — summary**: output a run summary including quality_score,
+  quality_gate, score_attempts, and gap-report links.
 
 ## Run modes
 | Mode | Trigger | Behaviour |

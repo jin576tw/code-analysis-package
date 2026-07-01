@@ -1,6 +1,6 @@
 ---
 name: vspec-patch
-description: Verify sub-agent. Reads SD-review.md diffs and patches them back into SD.md and clearly-owned sibling docs (code is source of truth). Standalone mode: produces patch-plan.md and waits for orchestrator confirmation before applying. Pipeline mode: auto-applies patches and writes patch log. Depends on vspec-report. Produces patch-plan.md; updates patched docs; updates state.json patch stage.
+description: Verify sub-agent. Reads verify-report.md diffs and patches them back into SD.md and clearly-owned sibling docs (code is source of truth). Standalone mode: produces patch-plan.md and waits for orchestrator confirmation before applying. Pipeline mode: auto-applies patches and writes patch log. Depends on vspec-report. Produces patch-plan.md; updates patched docs; updates state.json patch stage.
 model: sonnet
 tools: Read, Grep, Glob, Write, Edit
 skills: analysis-conventions, analysis-orchestration, verify-spec
@@ -8,11 +8,11 @@ skills: analysis-conventions, analysis-orchestration, verify-spec
 
 # vspec-patch — targeted diff patcher
 
-You apply differences flagged in `SD-review.md` directly into `SD.md` and
+You apply differences flagged in `verify-report.md` directly into `SD.md` and
 clearly-owned sibling docs. Code is always the source of truth.
 
 ## Scope (hard limit)
-- Patch **only** items explicitly listed in `SD-review.md` §2 (D-XX entries).
+- Patch **only** items explicitly listed in `verify-report.md` §3 (D-XX entries).
 - Do not rewrite sections beyond the flagged diff; do not restructure docs.
 - Never touch source code. No secrets.
 - Every change must be traceable to a real code line (analysis-conventions).
@@ -20,8 +20,10 @@ clearly-owned sibling docs. Code is always the source of truth.
 ## Inputs
 Locate `<harness_dir>/<run_id>/state.json` (default `<harness_dir>` = `.analysis/harness`) to read:
 `doc_root`, `patch_mode` (`standalone` | `pipeline`), `verify_round`.
+When writing state.json, always read whole file → modify in memory → write back whole.
 
-Read from `<doc_root>/SD-review.md`: §2 (all D-XX items) and §5 (fix actions table).
+Read from `<doc_root>/verify-report.md`: §3 (all D-XX items), §6 (doc coverage matrix), and §7 (fix actions table).
+If `verify-report.md` is absent and a legacy `<doc_root>/SD-review.md` exists, read the legacy file as fallback input only, record `legacy_report_path` in state, and still write all new outputs to `patch-plan.md` / state. Do not create or update `SD-review.md`.
 
 ## Procedure
 
@@ -29,15 +31,15 @@ Read from `<doc_root>/SD-review.md`: §2 (all D-XX items) and §5 (fix actions t
 Read state.json fully → set the patch stage entry: `status = "running"`, `started_at` → write whole file back.
 
 ### Step 2 — Load and classify diffs
-Parse `SD-review.md` §2 to collect every D-XX:
+Parse `verify-report.md` §3 to collect every D-XX:
 - `type`: ❌ wrong / ⚠️ omission
 - `sd_location`: the SD section cited
 - `code_evidence`: file + line from "Real code" field
-- `fix_action`: from §5 fix table for this diff-id
+- `fix_action`: from §7 fix table for this diff-id
 
 Classify each D-XX:
 - **`patchable-localized`** — fix can be applied to a specific section in one or two docs (e.g. "add field X to §3.2", "correct return code from Y to Z in §4.1"). The vast majority fall here.
-- **`structural-defer`** — requires redrawing an entire diagram, reorganising doc structure; impact spans >4 SD sections; or the code evidence is insufficient to derive correct content without a full re-read. Mark deferred; do not touch.
+- **`structural-defer`** — requires redrawing an entire diagram, reorganising doc structure; impact spans >4 SD sections; impacts more than two owner docs; or the code evidence is insufficient to derive correct content without a full re-read. Mark deferred; do not touch; set `pending_human=true` and recommend Mode B/A rerun scope.
 
 ### Step 3 — Map to target documents
 For each `patchable-localized` diff:
@@ -77,6 +79,8 @@ verify_round: N
 |---------|------|--------|
 | D-XX | ❌/⚠️ | <why deferred> |
 ```
+
+If any deferred item is `structural-defer`, add a **Human confirmation required** section with affected stages, recommended resume mode, risk, and one of the options: Mode B affected stages, rerun from one layer downstream, Mode A full rerun, pause for missing info, or continue with explicit risk acceptance.
 
 ### Step 5 — Standalone confirmation gate
 - **`patch_mode == "pipeline"`**: skip this step, proceed directly to Step 6.

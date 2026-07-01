@@ -2,9 +2,10 @@
 verify_round: N
 threshold: 0.XX
 prior_diff_rate: null
+legacy_source: null
 ---
 
-# <FUNCTION_NAME> — SD Review (SD-review)
+# <FUNCTION_NAME> — Verify Report
 
 > Review date: YYYY-MM-DD
 > Subject: `<docs_root>/<MODULE>/<FEATURE>/<PAGE>/<FUNCTION_NAME>/SD.md`
@@ -15,7 +16,18 @@ prior_diff_rate: null
 
 ---
 
-## §1 Summary stats
+## §1 Quality gate summary
+
+| Stage | Score / 10 | Gate | Attempts | Scorecard | Gap report |
+|-------|------------|------|----------|-----------|------------|
+| deps | N/A | N/A | 0 | N/A | N/A |
+
+> `quality_score` measures analysis-document quality. `diff_rate` below measures
+> spec-vs-code consistency. Treat them as separate signals.
+
+---
+
+## §2 Summary stats
 
 | Metric | Value |
 |--------|-------|
@@ -30,38 +42,43 @@ prior_diff_rate: null
 > Formula: `diff_rate = (❌ wrong + ⚠️ omission) / total reviewed items`.
 > Mode B (linked-update): denominator is only items in the re-analysed stages.
 > Threshold tightens by verify_round: round 1=0.20, round 2=0.15, round ≥3=0.10.
-> When diff_rate > resolved threshold, the orchestrator recommends optional full re-analysis.
+> When diff_rate > resolved threshold, the orchestrator recommends human review
+> and structural re-analysis only when confirmed.
 
 ---
 
-## §2 Difference detail
+## §3 Difference detail
 
 ### ❌ Wrong (SD contradicts code)
 
 #### D-XX: <title>
 - **SD location**: §N.N <section>
+- **Owner doc**: `SD.md` + `<sibling-doc-or-N/A>`
+- **Patch class**: patchable-localized | structural-defer
 - **SD says**: <SD's text>
 - **Real code** (`<File>` line N):
   ```
   <key snippet>
   ```
 - **Difference**: <why SD contradicts code>
-- **Impact**: <which SD sections>
+- **Impact**: <which SD sections and sibling docs>
 
 ### ⚠️ Omission (code has it, SD doesn't)
 
 #### D-XX: <title>
 - **SD location**: <related section or "not mentioned">
+- **Owner doc**: `SD.md` + `<sibling-doc-or-N/A>`
+- **Patch class**: patchable-localized | structural-defer
 - **Real code** (`<File>` line N):
   ```
   <key snippet>
   ```
 - **Difference**: <behaviour present in code but absent from SD>
-- **Impact**: <which SD sections>
+- **Impact**: <which SD sections and sibling docs>
 
 ---
 
-## §3 Confirmed correct
+## §4 Confirmed correct
 
 | # | SD location | Confirmed content | Code evidence |
 |---|-------------|-------------------|---------------|
@@ -69,7 +86,7 @@ prior_diff_rate: null
 
 ---
 
-## §4 UI behaviour (E2E) differences
+## §5 UI behaviour (E2E) differences
 
 > UI entry points only. Otherwise: **N/A (entry point is <WS/REST/Batch>)**
 
@@ -79,21 +96,30 @@ prior_diff_rate: null
 
 ---
 
-## §5 Recommended fixes
+## §6 Doc coverage matrix
 
-> Localised omissions and errors are patched back by `vspec-patch` (code is the source of truth).
-> When diff_rate > resolved threshold, the orchestrator may optionally trigger full re-analysis.
-
-| Priority | Diff id | Fix action | Affected SD section |
-|----------|---------|------------|---------------------|
-| High | D-XX | <action> | §N.N |
+| Diff id | Patch class | SD.md | Sibling owner doc | Pending human? | Recommended next action |
+|---------|-------------|-------|-------------------|----------------|--------------------------|
+| D-XX | patchable-localized | §N.N | VARIABLE-LIST.md | No | Patch localized sections |
 
 ---
 
-## §6 Overall assessment
+## §7 Recommended fixes
+
+> Localised omissions and errors are patched back by `vspec-patch` (code is the source of truth).
+> Structural-defer items produce a human-gated rerun recommendation instead of automatic broad rewriting.
+
+| Priority | Diff id | Patch class | Fix action | Affected SD section | Affected sibling doc |
+|----------|---------|-------------|------------|---------------------|----------------------|
+| High | D-XX | patchable-localized | <action> | §N.N | <doc or N/A> |
+
+---
+
+## §8 Overall assessment
 
 <3-5 sentences: core architecture correctness; where differences cluster
-(architecture / signatures / implementation detail); the most notable risk.>
+(architecture / signatures / implementation detail); the most notable risk;
+whether human confirmation is required.>
 
 ---
 

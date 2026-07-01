@@ -38,15 +38,15 @@ tool reads:
 
 ```
 # Full pipeline (orchestrator dispatches each worker in dependency order)
-@start-analysis analyse <FeatureOrEntryPoint>
+/start-analysis analyse <FeatureOrEntryPoint>
 
 # A single layer on its own
 /dependency-analysis
 /erd
 /flowchart
 
-# Spec-vs-code verification (produces SD-review.md with a diff_rate)
-@verify-spec verify <FeatureName>
+# Spec-vs-code verification (produces verify-report.md with a diff_rate)
+/verify-code verify <FeatureName>
 
 # Convert any analysis doc to a styled PDF
 /md-to-pdf
@@ -69,12 +69,13 @@ card §7; default `.analysis/docs/<MODULE>/<FEATURE>/<PAGE>/<FUNCTION>/`):
 | 4a | `SD.md` | sd | all |
 | 4b | `API-CONTRACT.md` | api-contract | WS/API only |
 | 4b | `SA.md` | sa / sa-api / sa-batch | all (dispatch) |
-| verify | `SD-review.md` | verify-spec | auto (post-sa) + on demand |
+| verify | `verify-report.md` | verify-spec | auto (post-sa) + on demand |
 
 ## Pipeline (DAG)
 
-`start-analysis` runs the full pipeline end-to-end, including an automatic
-verify phase after `sa`:
+`start-analysis` runs the full pipeline end-to-end. Each document-producing
+stage is gated by `quality-score` (`score_10 >= 9.0`) before downstream stages
+run, followed by an automatic verify phase after `sa`:
 
 ```
 deps → (vars ‖ erd ‖ funcs) → flow → rules → [ui-verify: UI only]
@@ -82,19 +83,21 @@ deps → (vars ‖ erd ‖ funcs) → flow → rules → [ui-verify: UI only]
      → (vspec-mock ‖ vspec-e2e) → vspec-static → vspec-report   ← auto verify
 ```
 
-`verify-spec` can also be triggered standalone to re-verify an existing
+`verify-code` can also be triggered standalone to re-verify an existing
 `SD.md` without re-running the full analysis pipeline:
 
 ```
-verify-spec (standalone): init → (mock ‖ e2e) → static → report → diff_rate
+verify-code (standalone): init → (mock ‖ e2e) → static → report → patch → diff_rate
 ```
 
-**diff_rate gate** — when `diff_rate > 10%`:
-- `start-analysis`: automatically applies the impact matrix to select mode B
-  (≤3 stages affected) or mode A (full re-run), re-analyses once, then
-  re-runs verify to measure the new `diff_rate`.
-- `verify-spec` (standalone): lists the top differences and asks whether to
-  re-enter `start-analysis` (code is the source of truth).
+**Quality and verify signals are separate**:
+- `quality_score` measures analysis-document completeness and evidence quality;
+  `quality_gate=passed` is required before downstream stages run.
+- `diff_rate` measures SD-vs-code consistency in `verify-report.md`.
+- `vspec-patch` patches localized D-XX differences first. If `diff_rate` exceeds
+  the adaptive threshold (round 1=0.20, round 2=0.15, round ≥3=0.10), the tool
+  records a human-review / manual re-analysis recommendation instead of broad
+  automatic re-analysis.
 
 ## Components
 
@@ -103,11 +106,12 @@ verify-spec (standalone): init → (mock ‖ e2e) → static → report → diff
   business-rules, playwright-verify, sd, api-contract, batch-analysis, sa,
   sa-api, sa-batch, verify-spec, md-to-pdf.
 - **16 agents**: deps, vars, erd, funcs, flow, rules, ui-verify, sd,
-  api-contract, sa, start-analysis (orchestrator), verify-spec (verify
-  orchestrator), vspec-mock, vspec-static, vspec-e2e, vspec-report.
+  api-contract, sa, quality-score, vspec-mock, vspec-static, vspec-e2e,
+  vspec-report, vspec-patch.
+- **2 commands**: start-analysis, verify-code.
 - **templates/**: `analysis-profile.template.md` (blank profile card),
   `examples/analysis-profile.example.md` (filled reference example),
-  `harness/` (run-state + handoff + SD-review templates), `pdf-style.css`.
+  `harness/` (run-state + handoff + verify-report templates), `pdf-style.css`.
 
 ## Profile card
 

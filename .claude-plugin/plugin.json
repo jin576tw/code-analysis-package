@@ -2,7 +2,7 @@
   "$schema": "https://json.schemastore.org/claude-code-plugin-manifest.json",
   "name": "code-analysis-package",
   "displayName": "Code Analysis Package",
-  "version": "0.4.0",
+  "version": "0.7.0",
   "description": "Cross-project reverse-engineering toolkit: layered code analysis (dependencies, variables, ERD, functions, flowchart, business rules, system design, system analysis, API contract) and spec-vs-code verification, driven by a per-project profile card.",
   "author": {
     "name": "jin576tw",

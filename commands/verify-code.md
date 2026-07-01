@@ -1,5 +1,5 @@
 ---
-description: Verify an existing SD.md against the real code and compute diff_rate. Standalone verification; runs vspec-mock + vspec-e2e → vspec-static → vspec-report → vspec-patch, then optionally asks to re-run full analysis only when diff_rate > adaptive threshold (verify_round-based).
+description: Verify an existing SD.md against the real code and compute diff_rate. Standalone verification; runs vspec-mock + vspec-e2e → vspec-static → vspec-report → vspec-patch, then asks whether to re-run the full analysis pipeline if diff_rate exceeds the adaptive threshold.
 argument-hint: <FeatureName>
 ---
 
@@ -20,7 +20,7 @@ Get `FUNCTION_NAME` (required) and optional `doc_root` (else search `<docs_root>
 
 ### Step 1 — Harness init
 
-`run_id = <timestamp>-verify-<feature>`. Create `<harness_dir>/<run_id>/`. Copy `${CLAUDE_PLUGIN_ROOT}/templates/harness/verify-state.json` → state.json and fill it. Resolve `verify_round`: read `<doc_root>/SD-review.md` frontmatter field `verify_round`; default 0 if absent or file not found; this run's round = prior + 1. Resolve `threshold`: round 1 → 0.20, round 2 → 0.15, round ≥3 → 0.10. Read `prior_diff_rate` from SD-review.md frontmatter (null if absent). Write `verify_round`, `threshold`, `prior_diff_rate`, `patch_mode="standalone"` into state.json. Write `handoff-init-to-mock.md` and `handoff-init-to-e2e.md` (doc_root, feature, module, entry_point). Read back to verify; on failure stop. Always: read whole file → modify in memory → write back whole.
+`run_id = <timestamp>-verify-<feature>`. Create `<harness_dir>/<run_id>/`. Copy `${CLAUDE_PLUGIN_ROOT}/templates/harness/verify-state.json` → state.json and fill it. Resolve `verify_round` and `prior_diff_rate` from `<doc_root>/verify-report.md`; if absent, read legacy `<doc_root>/SD-review.md` as fallback only. This run's round = prior + 1. Resolve `threshold`: round 1 → 0.20, round 2 → 0.15, round ≥3 → 0.10. Write `verify_round`, `threshold`, `prior_diff_rate`, `patch_mode="standalone"` into state.json. Write `handoff-init-to-mock.md` and `handoff-init-to-e2e.md` (doc_root, feature, module, entry_point). Read back to verify; on failure stop. Always: read whole file → modify in memory → write back whole.
 
 ### Step 2 — Parallel [mock, e2e]
 
@@ -32,7 +32,7 @@ Dispatch `vspec-static`; gate: static done + handoff-static-to-report present. R
 
 ### Step 4 — report
 
-Dispatch `vspec-report`; confirm report done, `diff_rate` set, and `<doc_root>/SD-review.md` exists.
+Dispatch `vspec-report`; confirm report done, `diff_rate` set, and `<doc_root>/verify-report.md` exists.
 
 ### Step 4.5 — patch
 
@@ -51,13 +51,13 @@ Read `diff_rate` and `threshold` from state.json.
 - `diff_rate > threshold` → patches applied but diff_rate remains above this round's threshold. List the top ❌/⚠️ items (≤10) and ask:
   `"⚠️ diff_rate X.X% > threshold Y.Y% (verify_round N). Patches applied. Trigger full re-analysis for structural issues? (y/n — default n)"`
 
-  On `y`: read SD-review §5 (recommended fixes), build a change list, apply the analysis-orchestration impact matrix (≤3 stages affected → mode B; >3 → mode A). Then **continue inline** with the full analysis pipeline. Do not stop or exit — the re-analysis is a continuation of the same conversation turn.
+  On `y`: read `verify-report.md` §7 (recommended fixes), build a change list, apply the analysis-orchestration impact matrix (≤3 stages affected → mode B; >3 → mode A). Then **continue inline** with the full analysis pipeline. Do not stop or exit — the re-analysis is a continuation of the same conversation turn.
 
   On `n` (default): deliver report only; go to Step 6.
 
 ### Step 6 — Wrap up
 
-Write `<harness_dir>/<run_id>/summary.md` (feature, module, diff_rate, SD-review path, patch decision, per-stage status, post-processing decision). Set state `status=done`, `ended_at`. Update the runs.md index row (status, last_stage, diff_rate, verify_round, docs, ended): read whole → modify row in memory → write back whole. Final output: run_id, SD-review path, diff_rate, verify_round, patch applied (y/n), post-processing decision.
+Write `<harness_dir>/<run_id>/summary.md` (feature, module, diff_rate, verify-report path, per-stage status, post-processing decision). Set state `status=done`, `ended_at`. Update the runs.md index row (status, last_stage, diff_rate, docs, ended): read whole → modify row in memory → write back whole. Final output: run_id, verify-report path, diff_rate, post-processing decision.
 
 ## Failure handling
 
