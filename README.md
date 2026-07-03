@@ -122,6 +122,37 @@ output docs path, optional UI-verification config, glossary, and the harness
 state dir. Start from `templates/analysis-profile.template.md` or run
 `/analysis-init`. Never put secrets in the card — record only env-var names.
 
+## Project integration checklist
+
+This package should stay project-neutral. Put project-specific operating rules in
+the target repository's workspace instructions (for example `CLAUDE.md`,
+`.github/copilot-instructions.md`, or `AGENTS.md`) and stable project facts in
+`.analysis-profile.md`.
+
+When installing the package into a project, document these local guardrails:
+
+- **Knowledge sources**: where agents should read existing domain knowledge,
+  specs, previous analyses, or an external memory vault before falling back to
+  source code.
+- **Repository and branch policy**: required base branches, multi-repo startup
+  order, branch naming conventions, and how to handle a dirty worktree without
+  overwriting user changes.
+- **Entry-point and API tracing rules**: how to move from UI actions to backend
+  endpoints, services, repositories, and persisted data for that project.
+- **Output path rules**: how analysis document folders are named, which labels or
+  routes are authoritative, and whether nested UI flows must become nested
+  folders instead of flattened names.
+- **Validation commands**: the closest build, test, lint, or UI verification
+  commands for frontend, backend, batch, and API changes.
+- **Quality gate policy**: whether `quality-score` must pass before downstream
+  stages, who handles structural gap reports, and when manual review is
+  required.
+- **Security rules**: which values must never be written to docs, prompts,
+  profile cards, logs, or generated reports.
+
+Keep reusable methodology in this package; keep project-specific business rules,
+environment paths, and team workflow constraints in the target project.
+
 ## Notes & limitations
 
 - Install/usage commands follow the Claude Code CLI; exact UI varies by version.
