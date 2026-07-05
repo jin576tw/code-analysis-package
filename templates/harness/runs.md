@@ -1,6 +1,7 @@
 # Analysis Harness Runs
 
 > Index of all `start-analysis` runs. Newest on top. One row per run.
+> `status` enum: `running | done | failed | partial | verify-deferred`.
 
 ## Runs
 

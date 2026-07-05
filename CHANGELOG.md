@@ -3,6 +3,68 @@
 All notable changes to this plugin are documented here.
 This project adheres to [Semantic Versioning](https://semver.org).
 
+## [0.8.0] - 2026-07-05
+
+### Changed
+- **Mechanical quality gate**: `quality-score` no longer classifies the gate.
+  It now reports `score_10`, a dimension breakdown, an accuracy spot-check
+  table, a defect-first candidate-defect list, and `structural_flags`; the
+  orchestrator (`/start-analysis`) derives `passed` / `repairing` /
+  `failed_local` / `failed_structural` / `pending_human` mechanically from
+  these fields. This closes a gap where scores below the 9.0 threshold could
+  previously be marked `passed` by the scoring agent itself with zero repair
+  cycles triggered.
+- **New score weights**: Accuracy (source fidelity) 0.30 — derived only from a
+  mandatory ≥8-claim spot-check against source, never scored subjectively —
+  Completeness 0.25, Testability 0.15, Clarity 0.10, Non-functional 0.10,
+  Technical constraints 0.10 (previously Clarity 0.25 / Completeness 0.30 /
+  Testability 0.20 / Non-functional 0.15 / Technical 0.10, with no accuracy
+  dimension at all).
+- **Defect-first scoring procedure**: before assigning any score, `quality-score`
+  must produce a candidate-defect list (≥3 candidates with evidence, or an
+  explicit "spot-checked N claims, all passed"). A dimension may not score 5/5
+  without documented defect-search evidence.
+- **Anchor rubric**: each dimension now has explicit 5/4/3/2 behavioral anchors
+  instead of defaulting to a cautious 3.5–4.5 range.
+- **Layer 2 batch scoring**: `vars`/`erd`/`funcs` are scored in a single batched
+  `quality-score` call once all three are done, returning three independent
+  scorecards — reducing per-run dispatch count without sharing/averaging scores.
+- **`vspec-mock` defaults to skipped**; `vspec-static` now defaults to
+  **direct-claims mode** (compares SD.md + sibling docs directly against real
+  code, no mock skeleton required). The legacy three-layer mock comparison
+  (mock A / real code B / SD text C) is opt-in only. `vspec-e2e` reuses
+  `ui-verify`'s existing mock HTML/screenshots instead of rebuilding them.
+- **Output-path model generalized to nested-only**: the doc_root path example
+  in `/start-analysis` and `analysis-orchestration` no longer uses a
+  hyphen-flattened `Parent-Child` example; every actual UI/navigation level is
+  now shown as its own nested folder, matching the rule that was already
+  stated ("mirror actual UI structure") but previously undermined by a
+  flattened example.
+
+### Added
+- **Entry-confirmation hard gate**: before dispatching `deps`, the orchestrator
+  must confirm the entry point from a ticket's attachments/screenshots (or the
+  user directly for non-ticket sources) — not just the ticket title/summary.
+  Confirmation is recorded as `entry_confirmed` / `entry_evidence` in
+  `state.json`.
+- **`verify_policy`** (profile §11, optional, default `always`): `risk-based`
+  lets Mode B or all-Accuracy-5.0 Mode A runs skip the auto-verify phase,
+  logged to the new `templates/harness/verify-backlog.md`. Mode A round 1
+  always runs verify regardless of policy.
+- **`verify-deferred` run status**: a user-requested postponement of the
+  auto-verify phase now marks the run `verify-deferred` instead of leaving it
+  in a generic incomplete state — it does not trigger the resume prompt on the
+  next `/start-analysis` launch.
+- **Quality/diff calibration**: `vspec-report` now includes a §9 calibration
+  table (per-stage `quality_score` vs. diff items attributed to that stage) in
+  `verify-report.md`; the orchestrator surfaces a calibration warning in
+  `summary.md` when a stage passed the gate (`score_10 >= 9.0`) but still
+  contributed more than 15% of the diff.
+- **`state.json` schema 1.3**: adds `verify_policy`, `entry_confirmed`,
+  `entry_evidence` (run level) and `spot_check`, `structural_flags` (stage
+  level); `quality_gate` is now written only by the orchestrator, never by
+  `quality-score`.
+
 ## [0.7.0] - 2026-07-01
 
 ### Added

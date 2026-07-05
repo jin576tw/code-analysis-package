@@ -43,6 +43,12 @@ doc** — this report is read-only with respect to them. No secrets.
    - §6 doc coverage matrix, mapping each diff to SD.md plus one sibling owner doc or `structural-defer`.
    - §7 recommended fixes (priority / diff-id / patch class / action / affected SD section / affected sibling doc).
    - §8 overall assessment, including pending_human and recommended next action.
+   - §9 **calibration**: read each stage's `quality_score` from `state.json`
+     and attribute each STATIC-DIFF/UI-DIFF entry to the stage/doc it belongs
+     to (via the diff's owner-doc mapping in §6). Produce a table: stage /
+     quality_score / diff items attributed / diff contribution (attributed
+     items ÷ total reviewed items). This lets the orchestrator flag stages
+     that passed the quality gate but still diverged from code.
    Do not write a new `SD-review.md`; it is a legacy input name only.
 4. Update state: `report.status=done`, `diff_rate`, `verify_report_path`,
    `confidence`, `ended_at`.

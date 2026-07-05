@@ -73,31 +73,51 @@ card §7; default `.analysis/docs/<MODULE>/<FEATURE>/<PAGE>/<FUNCTION>/`):
 
 ## Pipeline (DAG)
 
-`start-analysis` runs the full pipeline end-to-end. Each document-producing
-stage is gated by `quality-score` (`score_10 >= 9.0`) before downstream stages
+`start-analysis` runs the full pipeline end-to-end, starting with a hard entry-
+confirmation gate (ticket screenshot or explicit user confirmation before the
+first stage). Each document-producing stage — including `ui-verify`,
+`api-contract`, and `sa` — is gated by `quality-score` before downstream stages
 run, followed by an automatic verify phase after `sa`:
 
 ```
-deps → (vars ‖ erd ‖ funcs) → flow → rules → [ui-verify: UI only]
-     → sd → [api-contract: WS/API only] → sa
-     → (vspec-mock ‖ vspec-e2e) → vspec-static → vspec-report   ← auto verify
+[entry confirmation] → deps → (vars ‖ erd ‖ funcs, ONE batched quality-score)
+     → flow → rules → [ui-verify: UI only] → sd → [api-contract: WS/API only] → sa
+     → vspec-e2e ‖ (vspec-mock, default skipped) → vspec-static (direct-claims by default)
+     → vspec-report → vspec-patch   ← auto verify
 ```
+
+`quality-score` **does not decide the gate** — it only reports `score_10`
+(weighted from Accuracy 0.30, Completeness 0.25, Testability 0.15, Clarity
+0.10, Non-functional 0.10, Technical 0.10; Accuracy is derived from a mandatory
+≥8-claim source spot-check), a defect-first candidate-defect list, and
+structural flags. The orchestrator derives `passed` / `repairing` /
+`failed_local` / `failed_structural` / `pending_human` mechanically from those
+fields (`score_10 >= 9.0` to pass; repair cap 1 attempt for Layer 2, 2 for
+other stages).
 
 `verify-code` can also be triggered standalone to re-verify an existing
 `SD.md` without re-running the full analysis pipeline:
 
 ```
-verify-code (standalone): init → (mock ‖ e2e) → static → report → patch → diff_rate
+verify-code (standalone): init → e2e ‖ (mock, opt-in) → static → report → patch → diff_rate
 ```
 
 **Quality and verify signals are separate**:
 - `quality_score` measures analysis-document completeness and evidence quality;
-  `quality_gate=passed` is required before downstream stages run.
-- `diff_rate` measures SD-vs-code consistency in `verify-report.md`.
+  the mechanically-derived `quality_gate=passed` is required before downstream
+  stages run.
+- `diff_rate` measures SD-vs-code consistency in `verify-report.md`, which also
+  carries a quality/diff **calibration table** (per-stage quality_score vs. the
+  diff items attributed to that stage) so a gate that passed but still
+  diverged from code is visible.
 - `vspec-patch` patches localized D-XX differences first. If `diff_rate` exceeds
   the adaptive threshold (round 1=0.20, round 2=0.15, round ≥3=0.10), the tool
   records a human-review / manual re-analysis recommendation instead of broad
   automatic re-analysis.
+- **`verify_policy`** (profile, optional, default `always`): `risk-based` lets
+  Mode B or all-Accuracy-5.0 Mode A runs skip auto-verify, logged to
+  `verify-backlog.md`. A user-requested deferral marks the run `verify-deferred`
+  instead of leaving it "incomplete" (so it won't trigger the resume prompt).
 
 ## Components
 
@@ -106,12 +126,13 @@ verify-code (standalone): init → (mock ‖ e2e) → static → report → patc
   business-rules, playwright-verify, sd, api-contract, batch-analysis, sa,
   sa-api, sa-batch, verify-spec, md-to-pdf.
 - **16 agents**: deps, vars, erd, funcs, flow, rules, ui-verify, sd,
-  api-contract, sa, quality-score, vspec-mock, vspec-static, vspec-e2e,
-  vspec-report, vspec-patch.
+  api-contract, sa, quality-score, vspec-mock (opt-in, default skipped),
+  vspec-static, vspec-e2e, vspec-report, vspec-patch.
 - **2 commands**: start-analysis, verify-code.
-- **templates/**: `analysis-profile.template.md` (blank profile card),
-  `examples/analysis-profile.example.md` (filled reference example),
-  `harness/` (run-state + handoff + verify-report templates), `pdf-style.css`.
+- **templates/**: `analysis-profile.template.md` (blank profile card, incl.
+  optional §11 `verify_policy`), `examples/analysis-profile.example.md`
+  (filled reference example), `harness/` (run-state + handoff + verify-report
+  + `verify-backlog.md` templates), `pdf-style.css`.
 
 ## Profile card
 

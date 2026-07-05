@@ -27,11 +27,15 @@ profile §8. Mock HTML by default; live mode only if profile §8 enables it.
    if non-UI, report skipped without writing harness files.
    `<harness_dir>` default `.analysis/harness`.
    When writing state.json: read whole file → modify in memory → write back whole.
-2. Otherwise set `e2e.status=running`, `started_at`. Per the `playwright-verify`
-   skill: derive the operation outline from FLOWCHART/BUSINESS-RULES, build Mock
-   HTML, write `spec.ts`, run the check→auto-install→degrade environment flow,
-   capture screenshots, and compare observed UI behaviour against the analysed
-   flow.
+2. Otherwise set `e2e.status=running`, `started_at`. **Reuse before rebuilding**:
+   check `doc_root/playwright/` and `doc_root/images/` for mock HTML,
+   `spec.ts`, and screenshots already produced by `ui-verify` for this feature.
+   If present, run/extend the existing spec against the existing mock HTML
+   rather than regenerating it from scratch; only build new mock HTML/spec
+   files for scenarios `ui-verify` did not cover. Per the `playwright-verify`
+   skill: derive the operation outline from FLOWCHART/BUSINESS-RULES, run the
+   check→auto-install→degrade environment flow, capture screenshots, and
+   compare observed UI behaviour against the analysed flow.
 3. Write `handoff-e2e-to-report.md` with **UI-DIFF** entries (test case,
    operation, documented behaviour, observed behaviour, type ✅/⚠️/❌, affected
    section) plus counts; if degraded, mark cases "⏳ pending". Update state:

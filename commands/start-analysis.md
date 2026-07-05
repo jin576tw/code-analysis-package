@@ -1,5 +1,5 @@
 ---
-description: Run the full code-analysis pipeline with per-stage quality-score gates and final verify-report.md validation for a feature or entry-point. Reads .analysis-profile.md; run /analysis-init first if not present.
+description: Run the full code-analysis pipeline with per-stage quality-score gates (mechanically decided by the orchestrator, not by quality-score) and final verify-report.md validation for a feature or entry-point. Reads .analysis-profile.md; run /analysis-init first if not present.
 argument-hint: <FeatureOrEntryPoint>
 ---
 
@@ -28,12 +28,14 @@ Read `${CLAUDE_PROJECT_DIR}/.analysis-profile.md`. Validate:
 If any field is blank or placeholder, stop:
 `❌ Profile incomplete — <field(s)> not set. Run /analysis-init to regenerate the profile card.`
 
-Scan `<harness_dir>/*/state.json` for incomplete runs (any stage status ∉ {done, skipped}; `running` = session-interrupted, treat as pending; `blocked` = session-limit hit, treat as pending). If found, ask: resume / new / abandon.
+Scan `<harness_dir>/*/state.json` for incomplete runs (any stage status ∉ {done, skipped, deferred}; `running` = session-interrupted, treat as pending; `blocked` = session-limit hit, treat as pending). Runs whose top-level `status == "verify-deferred"` are **not** incomplete runs — they were intentionally paused before the vspec phase and do not trigger the resume prompt; print one summary line instead: `ℹ️ N run(s) awaiting verify (see verify-backlog.md)`. For any other incomplete run found, ask: resume / new / abandon.
 - **resume**: re-dispatch pending/running/blocked stages in DAG order (reset to pending; do not increment retry_count).
 - **new**: fresh run_id.
 - **abandon**: mark non-{done,skipped} stages failed, status=partial, archive summary.md, continue with new run.
 
-**7-day cleanup**: after handling incomplete runs, move summary.md to `_archive/<year>/`, delete state/handoff/log files, remove runs.md row for runs older than 7 days with status ∈ {done, failed, partial}.
+**7-day cleanup**: after handling incomplete runs, move summary.md to `_archive/<year>/`, delete state/handoff/log files, remove runs.md row for runs older than 7 days with status ∈ {done, failed, partial, verify-deferred} (for `verify-deferred`, keep the corresponding `verify-backlog.md` row).
+
+**User-requested verify deferral**: if the user asks to postpone the vspec/auto-verify phase for a run that has otherwise completed through `sa`, mark the pending vspec stages `status = "deferred"`, set the run's top-level `status = "verify-deferred"`, and still write `summary.md` and the `runs.md` row (status=`verify-deferred`, `ended` filled in). Add the run to `verify-backlog.md` with reason "user-deferred".
 
 ### 2. Mode detection
 
@@ -41,30 +43,57 @@ Scan `<harness_dir>/*/state.json` for incomplete runs (any stage status ∉ {don
 - **B** — linked-update ("X changed") → ask for explicit change list, filter via impact matrix.
 - **C** — cross-feature overview → produce `_global/<feature>-<entry>-overview/`.
 
+### 3.0 Entry confirmation (hard gate)
+
+Before dispatching `deps`, confirm the entry point is real, not just inferred
+from a ticket title or summary:
+- **Ticket-sourced analysis** (Jira or any issue tracker): fetch the ticket's
+  attachments/screenshots, read them, and match the screenshot's query fields +
+  button labels against the candidate page/entry — do not trust the ticket
+  title/summary alone (summaries have pointed at the wrong page before).
+- **Non-ticket sources**: confirm the entry point with the user directly.
+- Once confirmed, write run-level `entry_confirmed: true` and
+  `entry_evidence: <one-line description of what confirmed it>` into
+  `state.json`.
+- If the entry point cannot be confirmed and the user has not explicitly waived
+  confirmation, **do not dispatch `deps`** — stop and ask.
+
 ### 3. Path & entry type
 
 Determine MODULE/FEATURE/PAGE and entry-point type from the profile module/layer map. Add `batch-analysis` as first stage if batch entry type (else skipped). Ensure `deps` invokes the `batch-analysis` skill as part of its analysis.
 
-**doc_root 公式**（必須嚴格遵守）：
+**doc_root formula** (must be followed strictly):
 ```
-doc_root = <docs_root>/<MODULE>/<FEATURE>/<PAGE>/<tier>
+doc_root = <docs_root>/<MODULE>/<FEATURE>/[<PAGE>/][<SUB_PAGE>/].../<tier>
 ```
 
-**路徑推導規則（對照畫面結構，不得自行發明名稱）**：
+**Path derivation rules (must mirror the actual UI/entry structure — never
+invent names, never flatten multiple levels with a separator)**:
 
-1. 先讀 `adp-gi-ui/layouts/default.vue` 確認 `<MODULE>`（主選單）與 `<FEATURE>`（子選單 / 畫面標題）。
-2. `<PAGE>` 必須反映**實際畫面的 Tab / Sub-Tab 層級**，使用 `-` 連接多層：
-   - 若該 Vue 檔案是某 Tab 的子頁籤：`<父Tab>-<子Tab>`（例：`核保審核-檢核不通過`）
-   - 若是獨立功能頁：直接用畫面標題或選單名稱（例：`收據列印管理`）
-3. `<PAGE>` **永遠不得省略**；`<tier>` 只能是 `frontend` 或 `backend`，排在 PAGE 之後。
-4. 若 feature 引數的 PAGE 段不明確，**先讀截圖或畫面 SA.md 確認 Tab 結構，再決定命名**；若仍無法確認，停止並詢問使用者。
+1. `<MODULE>` = the top-level menu/module name, and `<FEATURE>` = the sub-menu
+   or screen title — both read from the project's actual navigation/routing
+   source (e.g. a layout/menu config file, route definitions, or controller
+   mapping), never invented.
+2. Each further drill-in level (Tab, sub-Tab, drill-in page) becomes its **own
+   nested folder** — one folder per actual UI level, in the order the user
+   actually navigates. **Do not flatten multiple levels into one folder name
+   with a separator** (e.g. `Parent-Child` is wrong; `Parent/Child/` is correct).
+3. The path has as many nested levels as the UI actually has — not a fixed
+   count. `<tier>` (`frontend`/`backend`) is always the last segment and is
+   never omitted.
+4. If the drill-in structure is unclear from the entry file alone, confirm it
+   from a screenshot or the screen's SA.md before naming folders; if still
+   unconfirmed, stop and ask the user rather than guessing a name.
 
-範例：
-- `uw_fail.vue`（核保審核 Tab → 檢核不通過 Sub-Tab）→ `新契約作業/承保受理作業/核保審核-檢核不通過/frontend`
-- `insuredEmployee.vue`（從 檢核不通過 點「編輯」進入）→ `新契約作業/承保受理作業/核保審核-員工核保審核/frontend`
-- ❌ 錯誤：`<docs_root>/<MODULE>/<FEATURE>/<tier>` （丟失 PAGE 層）
-- ❌ 錯誤：自行命名 PAGE（如「受理作業照會」），未對照 default.vue 或畫面
-- ✅ 正確：`<docs_root>/<MODULE>/<FEATURE>/<PAGE>/<tier>`，PAGE 來自畫面 Tab 結構
+Example (generic — substitute the project's real menu/tab names):
+- A page reached via `Top Menu → Sub Screen → Tab → Sub-Tab` →
+  `<docs_root>/Top Menu/Sub Screen/Tab/Sub-Tab/<tier>/`
+- ❌ Wrong: `<docs_root>/<MODULE>/<FEATURE>/<tier>` (drops the intermediate levels)
+- ❌ Wrong: `<docs_root>/<MODULE>/<FEATURE>/Tab-Sub-Tab/<tier>` (flattens two
+  real levels into one hyphenated name)
+- ❌ Wrong: inventing a folder name not traceable to an actual menu/tab/page title
+- ✅ Correct: one nested folder per actual navigation level, each named from
+  the menu/tab/page title itself
 
 ### 4. Run-state init
 
@@ -102,20 +131,87 @@ After each worker: read state.json stage.
 - On `status=blocked`: do not retry automatically; wait for human to resume.
 Track low-confidence stages (confidence == "low") for summary.
 
-After each document-producing worker, dispatch `quality-score` for that completed stage before any downstream stage may run. Pass `run_id`, `doc_root`, `stage`, `entry_point`, `entry_type`, and the stage doc path. Read back `quality_score`, `score_breakdown`, `score_attempts`, `quality_gate`, `repair_actions`, and `gap_report_path` from state.json:
-- `quality_gate == "passed"` → continue.
-- `quality_gate == "repairing"` and `score_attempts < 2` → re-dispatch the same stage using `repair_actions`, then re-run `quality-score`.
-- `quality_gate in {"failed_local", "failed_structural", "pending_human"}` or `pending_human == true` → stop affected downstream stages and ask for human confirmation.
+**Every** document-producing stage — including `ui-verify`, `api-contract`, and
+`sa` — must go through `quality-score` and a gate decision before any
+downstream stage (including the vspec/auto-verify phase) may run. A stage with
+`quality_score == null` and no gate decision is an invalid state; do not let
+the pipeline proceed past it.
+
+**Layer 2 batch scoring**: once `vars`, `erd`, and `funcs` are all `done`,
+dispatch `quality-score` **once** for the batch (pass all three doc paths).
+`quality-score` returns three independent scorecards/state updates — apply the
+gate decision below to each of the three independently (a repair on `vars`
+does not require repairing `erd`/`funcs`).
+
+**Gate decision (orchestrator-owned; quality-score has no say in the gate)**:
+after `quality-score` returns for a stage, read `quality_score`,
+`score_breakdown`, `structural_flags`, `score_attempts` from `state.json` and
+decide mechanically:
+1. **Validity check**: `quality/<stage>-score.md` must exist and
+   `quality_score` must be a float in `[0, 10]`. If missing/invalid →
+   re-dispatch `quality-score` once; if still invalid → `quality_gate =
+   failed_local`, stop that branch, report.
+2. If any `structural_flags` entry is `true`, or `quality_score < 8.0`, or
+   `structural_flags.completeness_lt_4 == true` → `quality_gate =
+   failed_structural`. Write/confirm the gap report, set `pending_human =
+   true`, stop affected downstream stages, and ask for human confirmation.
+3. Else if `quality_score >= 9.0` → `quality_gate = passed`, continue.
+4. Else (`8.0 <= quality_score < 9.0`) → `quality_gate = repairing`: build a
+   same-stage repair prompt from `repair_actions`, re-dispatch the same worker,
+   then re-run `quality-score`. Repair attempt cap: **1** for Layer 2
+   (vars/erd/funcs), **2** for all other stages. If the cap is exhausted and
+   `quality_score` is still `< 9.0` → `quality_gate = failed_local`; stop that
+   branch and ask the user to choose: accept the risk and continue / repair
+   manually / abandon.
+
+Write the decided `quality_gate` value into the stage's `state.json` entry
+yourself (quality-score does not write this field).
 
 ### 5.5. Auto-verify phase
 
-Runs immediately after `sa` completes:
-7. `vspec-mock` ‖ `vspec-e2e` — parallel (vspec-e2e self-skips for non-UI). Pass: run_id, doc_root, entry_point, entry_type.
-8. `vspec-static` — after both done/skipped.
-9. `vspec-report` — after static done; writes verify-report.md, sets diff_rate + verify_report_path in state.json.
+Runs immediately after `sa` completes and passes its gate.
+
+**Verify policy gate**: read profile's `verify_policy` field if present (default
+`always`).
+- Mode A, `verify_round == 1`, or `verify_policy == always` → run the full
+  verify phase below.
+- Mode B, or every stage's Accuracy dimension scored `5.0` in this run, **and**
+  `verify_policy == risk-based` → the auto-verify phase may be skipped. If
+  skipped: append a row to `<harness_dir>/verify-backlog.md` (create from
+  `${CLAUDE_PLUGIN_ROOT}/templates/harness/verify-backlog.md` if absent) with
+  `run_id`, `doc_root`, skip reason, date; proceed straight to Step 6 and note
+  the skip in summary.md.
+
+**Steps** (mock defaults to skipped — static runs in direct-claims mode):
+7. `vspec-mock` — **default: skipped**. Only dispatch it if the profile
+   explicitly requests the legacy three-layer mock comparison, or the user
+   asks for it. When skipped, set stage status `skipped` with
+   `error: "default-skip: static runs in direct-claims mode"`.
+   ‖ `vspec-e2e` (parallel with the mock decision) — self-skips for non-UI.
+   Before dispatching, check whether `doc_root/playwright/` and
+   `doc_root/images/` already contain mock HTML/spec/screenshots from
+   `ui-verify`; pass their paths so `vspec-e2e` reuses them instead of
+   rebuilding. Pass: run_id, doc_root, entry_point, entry_type.
+8. `vspec-static` — after `vspec-mock` done/skipped and `vspec-e2e` done/skipped.
+   Runs in **direct-claims mode** when `vspec-mock` was skipped: extract
+   verifiable claims directly from SD.md + sibling docs and classify each
+   against real code (no mock skeleton needed). Falls back to the legacy
+   three-layer mock comparison only if a mock skeleton exists.
+9. `vspec-report` — after static done; writes verify-report.md, sets diff_rate + verify_report_path in state.json, and a calibration block (see 5.6a).
 10. `vspec-patch` — after report done; **pipeline mode** (auto-applies). Pass: run_id, doc_root. Skip if diff_rate == 0. Retry ≤2.
 
 Same retry rule (≤2) applies to each vspec worker.
+
+### 5.6a. Quality/diff calibration
+
+After `vspec-report` completes, read its calibration block (per-stage
+`quality_score` vs. this run's diff item count) and add a "Calibration" table
+to `summary.md`: stage / quality_score / diff items attributable to that
+stage. If any stage scored `quality_score >= 9.0` and its `diff_rate`
+contribution is `> 0.15`, append:
+`⚠️ Quality/diff calibration warning: <stage> passed the gate (score=X) but
+still diverged from code more than expected (diff contribution > 15%) —
+consider tightening that stage's anchor rubric.`
 
 ### 5.6. diff_rate post-patch assessment
 
@@ -131,7 +227,7 @@ Read `diff_rate` and `threshold` from state.json after vspec-patch completes.
 
 ### 6. Summary
 
-Write `<harness_dir>/<run_id>/summary.md`: stage list with status/doc paths/confidence/pending-review totals, quality_score/quality_gate/score_attempts, low-confidence stages (⚠️ prefix), gap-report links, spec quality block (diff_rate ✅/⚠️, verify-report path, verify_round, threshold, patch summary: N patched / M deferred / patch_plan_path). If `diff_rate > threshold`, include the advisory note. Always append this block verbatim:
+Write `<harness_dir>/<run_id>/summary.md`: stage list with status/doc paths/confidence/pending-review totals, `quality_score / quality_gate / score_attempts / spot_check(passed/sampled) / structural_flags`, low-confidence stages (⚠️ prefix), gap-report links, the quality/diff calibration table (§5.6a), spec quality block (diff_rate ✅/⚠️, verify-report path, verify_round, threshold, patch summary: N patched / M deferred / patch_plan_path). If `diff_rate > threshold`, include the advisory note. If the run status is `verify-deferred`, state that clearly with a pointer to `verify-backlog.md`. Always append this block verbatim:
 
 ```
 ⚠️ 決策執行一致性：請 grep skills/ 與 agents/ 確認

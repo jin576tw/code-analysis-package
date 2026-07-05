@@ -100,3 +100,15 @@ feature — e.g. "search xhtml under webapp", "controllers annotated @RestContro
 
 - **Harness/run state dir**: <e.g. `.analysis/harness` — where orchestrators
   write run state.json / handoff files; defaults to `.analysis/harness` if unset>
+
+## 11. Verify policy (optional)
+
+- **`verify_policy`**: `always` (default) | `risk-based`
+  - `always` — every run's `sa` completion triggers the full auto-verify phase
+    (vspec-e2e → vspec-static → vspec-report → vspec-patch; vspec-mock defaults
+    to skipped, vspec-static runs in direct-claims mode).
+  - `risk-based` — only for Mode B (linked-update), or a Mode A run where every
+    stage's Accuracy dimension scored 5.0, may the orchestrator skip
+    auto-verify, logging the skip to `verify-backlog.md`. Mode A round 1
+    always runs verify regardless of this setting.
+- Leave unset to use `always`.

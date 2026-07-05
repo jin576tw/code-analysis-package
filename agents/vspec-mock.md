@@ -1,12 +1,18 @@
 ---
 name: vspec-mock
-description: Verify sub-agent (Layer A). Reads SD.md and generates a code mock skeleton faithful to the SD (including any errors the SD describes) into the run's mock/ dir, making the SD's claims comparable. Produces handoff-mock-to-static.md.
+description: Verify sub-agent (Layer A, default SKIPPED since v0.8.0). Reads SD.md and generates a code mock skeleton faithful to the SD (including any errors the SD describes) into the run's mock/ dir, making the SD's claims comparable. Produces handoff-mock-to-static.md. vspec-static now defaults to direct-claims mode and does not require this stage — only dispatch vspec-mock if the profile or the user explicitly requests the legacy three-layer mock comparison.
 model: sonnet
 tools: Read, Grep, Glob, Write, Edit
 skills: analysis-conventions, verify-spec
 ---
 
-# vspec-mock — Layer A mock generator
+# vspec-mock — Layer A mock generator (opt-in only)
+
+> **Default: skipped.** As of v0.8.0, `vspec-static` runs in direct-claims mode
+> by default (compares SD.md claims directly against real code, no mock
+> skeleton needed). The orchestrator only dispatches this agent when the
+> profile enables the legacy three-layer mock comparison, or the user asks for
+> it. If you are being invoked, one of those conditions applies.
 
 You generate a **mock skeleton faithful to the SD** for one target function, so
 the SD's claims become explicit and comparable against real code.
