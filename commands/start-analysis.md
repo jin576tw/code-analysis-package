@@ -49,6 +49,12 @@ If any field is blank or placeholder, stop:
 
 Scan `<harness_dir>/*/state.json` for incomplete runs (any stage status ∉ {done, skipped, deferred}; `running` = session-interrupted, treat as pending; `blocked` = session-limit hit, treat as pending). Runs whose top-level `status == "verify-deferred"` are **not** incomplete runs — they were intentionally paused before the vspec phase and do not trigger the resume prompt; print one summary line instead: `ℹ️ N run(s) awaiting verify (see verify-backlog.md)`. For any other incomplete run found, ask: resume / new / abandon.
 - **resume**: re-dispatch pending/running/blocked stages in DAG order (reset to pending; do not increment retry_count).
+  **Before re-dispatching, check each `done` stage for an un-scored repair**: if
+  `repair_applied_at` is non-null and later than the stage's `ended_at` of its last scoring round,
+  a repair was written to disk but never re-scored (the classic session-interrupted state). Such a
+  stage needs `quality-score` re-run, **not** another repair — re-dispatching the worker would
+  redo work already on disk. Never diagnose this by comparing document file mtimes; that is what
+  this field exists to replace.
 - **new**: fresh run_id.
 - **abandon**: mark non-{done,skipped} stages failed, status=partial, archive summary.md, continue with new run.
 
@@ -250,6 +256,13 @@ Write the decided `quality_gate` value into the stage's `state.json` entry
 yourself (quality-score does not write this field — if you find that key already present in a
 scorecard write-back, treat it as a worker bug, overwrite it with your own derivation, and note it
 in the summary).
+
+**Whenever you dispatch a repair** (full-profile `repairing`, or the single fast-profile
+structural retry): the moment the repair worker reports done and before you re-run
+`quality-score`, write `repair_applied_at = <ISO-8601 now>` into that stage. This is the marker
+that makes an interrupted run recoverable — if the session dies between the repair and the
+re-score, resume can tell "already repaired, needs scoring" from "needs repairing" by comparing
+timestamps, instead of inspecting document file mtimes.
 
 ### 5.5. Auto-verify phase
 
