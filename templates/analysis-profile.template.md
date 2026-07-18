@@ -112,3 +112,44 @@ feature — e.g. "search xhtml under webapp", "controllers annotated @RestContro
     auto-verify, logging the skip to `verify-backlog.md`. Mode A round 1
     always runs verify regardless of this setting.
 - Leave unset to use `always`.
+- **A run with `analysis_profile: fast` always runs verify and may not defer it** — see §12.
+
+## 12. Fast profile (optional but recommended to review)
+
+`analysis_profile`: `full` (default) | `fast`
+
+Both profiles produce the **same document set and run the same stages** — including `ui-verify`
+and the full Layer 5 verify phase. Only two things differ:
+
+| | `full` | `fast` |
+|---|---|---|
+| Per-stage gate | `score_10 >= 9.0` + repair loop (cap 1 for Layer 2, 2 elsewhere) | structural gate: 4 contradiction-type flags false + Completeness ≥ 3.0 + score_10 ≥ 6.0, **no repair loop** |
+| Layer 2 model (`deps`/`vars`/`erd`/`funcs`) | strongest available model (dispatch override) | agent default (cheap fast model) |
+
+Fast trades per-stage citation precision for speed, and recovers it in bulk from the end-of-run
+spec-vs-code verify. Use it when you need architectural understanding under time pressure and
+intend to upgrade later.
+
+### What fast does NOT waive
+
+Only the per-stage 9.0 gate is waived. All of the following still apply, some more strictly:
+
+| Rule | Under fast |
+|---|---|
+| `ui-verify` (if this project mandates it) | **Runs in full** — it is the pipeline's only *constructive* check, and therefore the primary defence against omission-class defects that the contradiction-type structural flags cannot catch. Fast is the profile most prone to omissions, so this is exactly where it is needed |
+| Auto-verify (Layer 5) | **Mandatory, not deferrable** — fast's whole precision story depends on it |
+| Entry-point confirmation hard gate | Enforced |
+| Bug-candidate labelling rules | **Stricter** — fast output is less verified, so static inferences must carry the lowest confidence label |
+| Output path rules, cross-feature reference notes | Unchanged |
+
+### Output marking and upgrade
+
+- Every fast document carries a provenance banner (see `analysis-conventions` §12) containing the
+  greppable string `analysis_profile: fast`, and declaring itself not a delivery basis.
+- **Downgrade protection**: a fast run must never overwrite existing full-profile documents.
+- **Upgrade** (`--full` re-run) is two-phase: first score *all* existing fast documents at the 9.0
+  threshold **without modifying anything**, producing a consolidated `upgrade-assessment.md`; then
+  close the gap per that assessment. Layer 2 is always regenerated with the stronger model rather
+  than topped up in place.
+- Fast must never be selected implicitly — if the user gives no `--fast` / `--full` signal, the
+  orchestrator asks.

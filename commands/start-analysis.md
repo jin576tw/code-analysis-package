@@ -1,6 +1,6 @@
 ---
-description: Run the full code-analysis pipeline with per-stage quality-score gates (mechanically decided by the orchestrator, not by quality-score) and final verify-report.md validation for a feature or entry-point. Reads .analysis-profile.md; run /analysis-init first if not present.
-argument-hint: <FeatureOrEntryPoint>
+description: Run the code-analysis pipeline with per-stage quality-score gates (mechanically decided by the orchestrator, not by quality-score) and final verify-report.md validation for a feature or entry-point. Supports two analysis profiles — full (9.0 gate + repair loop) and fast (structural gate, precision recovered by the end-of-run verify). Reads .analysis-profile.md; run /analysis-init first if not present.
+argument-hint: <FeatureOrEntryPoint> [--fast | --full]
 ---
 
 # /start-analysis
@@ -8,6 +8,25 @@ argument-hint: <FeatureOrEntryPoint>
 **Target**: `$ARGUMENTS`
 
 If `$ARGUMENTS` is empty, ask the user for the feature name or entry-point before continuing.
+
+## Analysis profile
+
+Both profiles produce the **same document set and run the same stages** — including `ui-verify`
+and the full Layer 5 verify phase. They differ in exactly two things:
+
+| | `--full` (default) | `--fast` |
+|---|---|---|
+| Per-stage gate | `score_10 >= 9.0`, repair + rescore on miss (cap 1 for Layer 2, 2 elsewhere) | structural gate only (4 contradiction flags false + Completeness ≥ 3.0 + score ≥ 6.0), **no repair loop** |
+| Layer 2 model (`deps`/`vars`/`erd`/`funcs`) | strongest available model (dispatch override) | agent default (cheap fast model) |
+| Output status | deliverable | **draft — must not be used as a delivery basis** |
+
+Fast recovers citation precision in bulk from the end-of-run `vspec-static` → `vspec-report` →
+`vspec-patch` sweep instead of grinding each stage. Its documents carry an `analysis_profile: fast`
+banner and can be upgraded later with `--full`, which re-scores them at 9.0 and tops up or
+regenerates as needed (see the orchestration skill's Upgrade run).
+
+**If neither flag is given, ask the user which profile to run** — `--fast` is a deliberate,
+risk-bearing downgrade and must never be chosen implicitly.
 
 ## Orchestration
 
@@ -37,11 +56,21 @@ Scan `<harness_dir>/*/state.json` for incomplete runs (any stage status ∉ {don
 
 **User-requested verify deferral**: if the user asks to postpone the vspec/auto-verify phase for a run that has otherwise completed through `sa`, mark the pending vspec stages `status = "deferred"`, set the run's top-level `status = "verify-deferred"`, and still write `summary.md` and the `runs.md` row (status=`verify-deferred`, `ended` filled in). Add the run to `verify-backlog.md` with reason "user-deferred".
 
-### 2. Mode detection
+### 1.6 Analysis profile selection (before harness init)
+
+Resolve `analysis_profile` (`full` | `fast`) from the arguments: `--fast` → fast; `--full` → full;
+**no signal → stop and ask the user**, showing the trade-off table above. Write the result into
+`state.json` at run level (§4). An existing `state.json` without the field (schema ≤1.3) means
+`full`.
+
+### 2. Mode & profile detection
+
+Mode and profile are orthogonal — mode says *why* you are analysing, profile says *how strictly
+each stage is gated*. Any mode may run under either profile.
 
 - **A** — reverse-analysis ("analyse X") → full pipeline.
 - **B** — linked-update ("X changed") → ask for explicit change list, filter via impact matrix.
-- **C** — cross-feature overview → produce `_global/<feature>-<entry>-overview/`.
+- **C** — cross-feature overview → produce `_global/<feature>-overview/` (path per profile card).
 
 ### 3.0 Entry confirmation (hard gate)
 
@@ -97,7 +126,7 @@ Example (generic — substitute the project's real menu/tab names):
 
 ### 4. Run-state init
 
-`run_id = <timestamp>-<feature>`. Create `<harness_dir>/<run_id>/state.json` (all stages pending, including vspec-* and vspec-patch; `re_analysis_count=0`, `diff_rate=null`). Resolve `verify_round`: read `<doc_root>/verify-report.md` frontmatter field `verify_round`; if absent, read legacy `<doc_root>/SD-review.md` as fallback only; default 0 if neither file exists. This run's round = prior + 1. Resolve `threshold`: round 1 → 0.20, round 2 → 0.15, round ≥3 → 0.10. Write `verify_round`, `threshold`, `patch_mode="pipeline"` into state.json. Write `handoff-init-to-deps.md`. Use templates from `${CLAUDE_PLUGIN_ROOT}/templates/harness/`. Always: read whole file → modify in memory → write back whole.
+`run_id = <timestamp>-<feature>`. Create `<harness_dir>/<run_id>/state.json` (all stages pending, including vspec-* and vspec-patch; `re_analysis_count=0`, `diff_rate=null`). Write `analysis_profile` from §1.6 (template is schema **1.4**). Resolve `verify_round`: read `<doc_root>/verify-report.md` frontmatter field `verify_round`; if absent, read legacy `<doc_root>/SD-review.md` as fallback only; default 0 if neither file exists. This run's round = prior + 1. Resolve `threshold`: round 1 → 0.20, round 2 → 0.15, round ≥3 → 0.10. Write `verify_round`, `threshold`, `patch_mode="pipeline"` into state.json. Write `handoff-init-to-deps.md`. Use templates from `${CLAUDE_PLUGIN_ROOT}/templates/harness/`. Always: read whole file → modify in memory → write back whole.
 
 **doc_root portability**: store `doc_root` in `state.json` as a **relative path** (relative to repo root) — not an absolute path. Resolve to absolute only when constructing the actual filesystem path for writing a file.
 
@@ -106,20 +135,40 @@ Example (generic — substitute the project's real menu/tab names):
 **Must complete before dispatching any worker.**
 
 1. If `<harness_dir>/runs.md` does not exist → create it from `${CLAUDE_PLUGIN_ROOT}/templates/harness/runs.md`.
-2. Append run row (run_id, feature, entry_type, mode, started ISO, status=running, re_analysis_count=0, last_stage=—, diff_rate=—, verify_round=N, quality_min=—, failed_quality=—, docs=0/N, ended=—).
+2. Append run row (run_id, feature, entry_type, mode, **profile**, started ISO, status=running, re_analysis_count=0, last_stage=—, diff_rate=—, verify_round=N, quality_min=—, failed_quality=—, docs=0/N, ended=—).
 3. Immediately read back `runs.md`; verify the row with this run_id is present and status=running.
    - ✅ `[GATE] runs.md verified — starting DAG` → continue.
    - ❌ `[GATE] ⚠️ runs.md write failed: <reason> — harness tracking degraded` → continue (best-effort).
 
 ### 5. DAG dispatch (via Task)
 
-Dispatch in dependency order, passing `run_id`, `doc_root`, entry point and the relevant handoff path to each worker:
+Dispatch in dependency order, passing `run_id`, `doc_root`, entry point, `analysis_profile` and the relevant handoff path to each worker:
 1. `deps`
 2. `vars`, `erd`, `funcs` — parallel (single batch of Task calls)
 3. `flow` → `rules`
 4. `ui-verify` — UI entry points only (else mark skipped)
 5. `sd`
 6. `api-contract` — WS/API only (else skipped) → `sa`
+
+**The DAG is identical under both profiles** — fast runs every stage including `ui-verify` and the
+whole Layer 5 phase. There is no fast-mode skip list.
+
+**Model dispatch by profile**: for `deps`/`vars`/`erd`/`funcs`, pass an explicit `model` override
+to the strongest model available under `full`; pass no override under `fast` (their frontmatter
+default is the cheap fast model). Rationale: those four are catalogue stages commonly configured
+to a cheap model, and a weak model can make `score_10 >= 9.0` effectively unreachable — turning
+the full-profile repair loop into a guaranteed spin. Do not edit the agents' frontmatter to
+achieve this; override at dispatch so standalone invocation is unaffected.
+
+**Always pass `analysis_profile` in the worker prompt** — workers use it to decide whether to
+write the fast provenance banner (`analysis-conventions` §12). Omitting it produces unmarked fast
+documents, the worst failure mode of this design.
+
+**Downgrade protection (fast runs only)**: before dispatching a stage whose target document
+already exists, grep its first 15 lines for `analysis_profile: fast`. If the file exists
+**without** that marker it is full-profile work — mark the stage `skipped` with
+`error: "downgrade-protected: full-profile doc exists"` and tell the user. Never overwrite
+full-profile output with fast output.
 
 After each worker: read state.json stage.
 - If the Task result text contains "session limit" or "resets" (platform quota hit):
@@ -146,7 +195,10 @@ does not require repairing `erd`/`funcs`).
 **Gate decision (orchestrator-owned; quality-score has no say in the gate)**:
 after `quality-score` returns for a stage, read `quality_score`,
 `score_breakdown`, `structural_flags`, `score_attempts` from `state.json` and
-decide mechanically:
+decide mechanically. **Which derivation applies is determined by `analysis_profile`.**
+
+#### 5a. Full-profile gate derivation
+
 1. **Validity check**: `quality/<stage>-score.md` must exist and
    `quality_score` must be a float in `[0, 10]`. If missing/invalid →
    re-dispatch `quality-score` once; if still invalid → `quality_gate =
@@ -164,8 +216,40 @@ decide mechanically:
    branch and ask the user to choose: accept the risk and continue / repair
    manually / abandon.
 
+#### 5b. Fast-profile gate derivation
+
+Same scorecard, same agent — only your reading of it changes. **No repair loop**:
+
+1. Validity check exactly as in 5a rule 1.
+2. Any of the four **contradiction-type** flags true — `entry_point_wrong`,
+   `api_boundary_wrong`, `data_table_wrong`, `main_flow_wrong` → a real wrong-direction risk.
+   Allow **1** repair attempt; still true → `failed_structural`, `pending_human = true`, stop.
+3. Else if `score_breakdown.completeness < 3.0` → `failed_structural` (genuine coverage hole, not
+   brevity). Read the **raw Completeness dimension**, not the `completeness_lt_4` boolean.
+4. Else if `quality_score < 6.0` → `failed_structural` (sanity floor).
+5. Else → `quality_gate = fast_pass`, continue. **Do not compare against 9.0 and do not repair.**
+
+`affects_gt_2_docs` is warning-only under fast — record it, do not block.
+
+#### 5c. Convergence circuit breaker (both profiles)
+
+Independently of the repair caps above, stop and escalate when cumulative `score_attempts >= 4`
+(**counting every scoring round regardless of who produced the fix** — worker auto-repair, your
+re-dispatches, and manual human edits alike), or when `score_10` has not improved across **2
+consecutive** rounds. Offer exactly three options — accept the risk (→ `accepted_risk`) / change
+strategy (full regeneration, different model, narrower scope) / abandon. **Never silently start
+another round**: non-monotonic scores mean the strategy is wrong, not that one more round lands it.
+
+#### 5d. `accepted_risk`
+
+Terminal gate value meaning "a human saw a sub-threshold result and chose to proceed" — **not**
+`passed`. Writing it requires also writing `resume_decision` (who decided, on what evidence, what
+residual risk), and both `summary.md` and the `runs.md` row must display it distinctly.
+
 Write the decided `quality_gate` value into the stage's `state.json` entry
-yourself (quality-score does not write this field).
+yourself (quality-score does not write this field — if you find that key already present in a
+scorecard write-back, treat it as a worker bug, overwrite it with your own derivation, and note it
+in the summary).
 
 ### 5.5. Auto-verify phase
 
@@ -173,6 +257,11 @@ Runs immediately after `sa` completes and passes its gate.
 
 **Verify policy gate**: read profile's `verify_policy` field if present (default
 `always`).
+- **`analysis_profile == fast` → always run the full verify phase; it is not skippable and not
+  deferrable, not even on explicit user request.** Fast's entire precision argument is that this
+  end-of-run systematic sweep substitutes for the per-stage repair loop; skipping it leaves the
+  documents with neither safeguard. If the user asks to defer, offer a full run instead. This rule
+  overrides both `verify_policy` and the deferral path.
 - Mode A, `verify_round == 1`, or `verify_policy == always` → run the full
   verify phase below.
 - Mode B, or every stage's Accuracy dimension scored `5.0` in this run, **and**
@@ -227,13 +316,23 @@ Read `diff_rate` and `threshold` from state.json after vspec-patch completes.
 
 ### 6. Summary
 
-Write `<harness_dir>/<run_id>/summary.md`: stage list with status/doc paths/confidence/pending-review totals, `quality_score / quality_gate / score_attempts / spot_check(passed/sampled) / structural_flags`, low-confidence stages (⚠️ prefix), gap-report links, the quality/diff calibration table (§5.6a), spec quality block (diff_rate ✅/⚠️, verify-report path, verify_round, threshold, patch summary: N patched / M deferred / patch_plan_path). If `diff_rate > threshold`, include the advisory note. If the run status is `verify-deferred`, state that clearly with a pointer to `verify-backlog.md`. Always append this block verbatim:
+Write `<harness_dir>/<run_id>/summary.md`: **`analysis_profile`**, stage list with status/doc paths/confidence/pending-review totals, `quality_score / quality_gate / score_attempts / spot_check(passed/sampled) / structural_flags`, low-confidence stages (⚠️ prefix), gap-report links, the quality/diff calibration table (§5.6a), spec quality block (diff_rate ✅/⚠️, verify-report path, verify_round, threshold, patch summary: N patched / M deferred / patch_plan_path). If `diff_rate > threshold`, include the advisory note. If the run status is `verify-deferred`, state that clearly with a pointer to `verify-backlog.md`.
+
+**Fast-run summary additions**: state `profile=fast` prominently at the top together with a line
+declaring the output draft-grade and not a delivery basis; list each stage's `fast_pass` verdict
+**alongside its real `score_10` / `completeness` / `spot_check`** (never hide the numbers behind
+the verdict); print the upgrade command `/start-analysis <feature> --full`; report the end-of-run
+`diff_rate` against the round-1 threshold as the run's primary quality evidence; and if this
+`doc_root` has now accumulated ≥2 fast runs with no full run, warn that the feature's architecture
+understanding has never been precision-verified.
+
+Always append this block verbatim:
 
 ```
 ⚠️ 決策執行一致性：請 grep skills/ 與 agents/ 確認
 無舊做法或硬編碼殘留，避免「決策寫了但 prompt 未更新」的執行脫節。
 ```
 
-Update runs.md row (status, re_analysis_count, last_stage, diff_rate, quality_min, failed_quality, docs N/total, ended ISO). Read whole → modify row in memory → write back whole.
+Update runs.md row (status, **profile**, re_analysis_count, last_stage, diff_rate, quality_min, failed_quality, docs N/total, ended ISO). Read whole → modify row in memory → write back whole.
 
 Do **not** write session-level files outside `<harness_dir>` / `<docs_root>`.

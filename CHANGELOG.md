@@ -3,6 +3,92 @@
 All notable changes to this plugin are documented here.
 This project adheres to [Semantic Versioning](https://semver.org).
 
+## [0.9.0] - 2026-07-18
+
+### Added
+- **Analysis profiles (`full` / `fast`)** — a new run-level dimension, *orthogonal to the run
+  modes* (A/B/C): mode says why you are analysing, profile says how strictly each stage is gated.
+  Both profiles produce the **same document set and run the same stages**, including `ui-verify`
+  and the full Layer 5 verify phase. They differ in exactly two things:
+  - **Per-stage gate.** `full` keeps `score_10 >= 9.0` plus the repair loop. `fast` uses a
+    structural gate — the four *contradiction-type* flags (`entry_point_wrong`,
+    `api_boundary_wrong`, `data_table_wrong`, `main_flow_wrong`) all false, raw Completeness
+    ≥ 3.0, and `score_10 >= 6.0` as a sanity floor — and **never enters a repair loop**.
+  - **Layer 2 model.** `full` dispatches `deps`/`vars`/`erd`/`funcs` with an explicit override to
+    the strongest available model; `fast` keeps the cheap frontmatter default.
+
+  Motivation: field measurement showed roughly three quarters of a full run's cost sat in the
+  9.0 repair loop, and that the loop's blocking issues were citation-precision defects (off-by-one
+  line ranges, stale cross-references) rather than anything affecting whether the analysis pointed
+  developers in the right direction. Fast recovers that precision in bulk from the end-of-run
+  `vspec-static` → `vspec-report` → `vspec-patch` sweep, which extracts *every* verifiable claim
+  rather than sampling ≥8 per round. Typical cost drops from ~48 to ~20 agent calls per tier.
+- **`fast_pass` and `accepted_risk` gate values.** `fast_pass` = fast structural gate cleared
+  (`score_10` may legitimately sit below 9.0). `accepted_risk` = a human explicitly accepted a
+  sub-threshold result; it is a terminal state, requires `resume_decision` to be filled in, and
+  must be displayed distinctly in `summary.md` and `runs.md`. **Neither is equivalent to
+  `passed`.**
+- **Convergence circuit breaker** (both profiles). A gate that can be retried without bound is not
+  a gate. A stage now stops and escalates when cumulative `score_attempts >= 4` — counting worker
+  auto-repairs, orchestrator re-dispatches, and manual human edits alike — or when `score_10` has
+  failed to improve across two consecutive rounds. The orchestrator then offers exactly three
+  options: accept the risk / change strategy / abandon, and must never silently start another
+  round. Field measurement recorded a single Layer 2 batch running nine scoring rounds with scores
+  oscillating between 6.2 and 8.2 and never converging, because nothing in the protocol was
+  empowered to call a halt.
+- **Fast provenance banner** (`analysis-conventions` §12), written by the worker (not the
+  orchestrator, which may not edit files under `docs_root`) into every fast document, containing
+  the greppable marker `analysis_profile: fast`. The banner lives in the document body rather than
+  only in harness state because the harness is deleted by the 7-day cleanup while the documents
+  persist in the docs repo.
+- **Two-phase fast → full upgrade.** Phase 1 scores *all* existing fast documents at the 9.0
+  threshold while changing nothing, producing a consolidated `upgrade-assessment.md`; Phase 2 then
+  closes the gap per that assessment. Layer 2 is always regenerated with the stronger model rather
+  than topped up in place, since topping up cheap-model output replays the same unreachable-gate
+  grind. A full run must never take the "complete → reuse as input" path for a fast-marked
+  document.
+- **Downgrade protection**: a fast run marks a stage `skipped` rather than overwriting an existing
+  full-profile document at the same path.
+- **Fast-profile guard on manual verification**: `/verify-code` and the `verify-spec` skill warn
+  and require confirmation before verifying a fast-marked `SD.md`, whose `diff_rate` would reflect
+  the profile rather than a genuine quality gap. The verify phase internal to a fast run is
+  unaffected — that one is the design.
+- **`repair_applied_at`** stage field, so a resumed orchestrator can detect "repair written to
+  disk but not yet re-scored" by comparing timestamps instead of doing forensic mtime analysis on
+  the document files.
+- **Pattern sweep** in `quality-score`: a defect found by sampling is treated as evidence of a
+  *defect class*. The scorer must sweep the whole document for sibling occurrences and enumerate
+  all of them in `repair_actions`, so one repair pass closes the class instead of surfacing the
+  next instance next round.
+
+### Changed
+- **`_schema_version` 1.3 → 1.4.** Adds run-level `analysis_profile`, stage-level
+  `repair_applied_at`, and a self-documenting `_enums` block. Note that 1.3 had been published
+  with two divergent field sets; 1.4 resolves that collision. A `state.json` lacking
+  `analysis_profile` (schema ≤ 1.3) is read as `full`.
+- `runs.md` gains a `profile` column, with header guidance that a sub-9.0 `quality_min` on a fast
+  row is expected rather than a failure, and that `accepted_risk` is not `passed`.
+- **Verify deferral is no longer free.** Under `full`, a deferred or skipped verify must be called
+  out prominently in `summary.md` in addition to the `verify-backlog.md` row — `diff_rate` is the
+  only signal that can retrospectively tell you whether the quality scores were calibrated at all.
+  Under `fast` the phase is **mandatory and not deferrable**, since fast has no other precision
+  mechanism.
+- **Calibration gains a profile dimension.** `analysis_profile` is recorded alongside `diff_rate`
+  so fast runs can be compared against the project's full-run history. This is the falsification
+  test for the fast profile's core premise: if fast runs land at a materially worse `diff_rate`,
+  one end-of-run sweep does *not* substitute for per-stage repair, and the fast gate needs
+  tightening.
+- **`quality-score` write-back self-check**: it must confirm its `state.json` payload contains no
+  `quality_gate` key, and must leave any pre-existing value untouched. Scorecards were observed
+  writing gate verdicts that the orchestrator then had to overwrite — quietly re-merging the
+  evaluator and judge roles that the 0.8.0 mechanical-gate design exists to separate.
+
+### Fixed
+- Cross-feature overview path was inconsistent across the package: the orchestration skill and
+  `/start-analysis` said `_global/<feature>-<entry>-overview/` while the profile template said
+  `_global/<feature>-overview/`. Normalised to the profile template's form, with the profile card
+  declared authoritative.
+
 ## [0.8.0] - 2026-07-05
 
 ### Changed

@@ -18,6 +18,13 @@ You **do not verify yourself** — sub-agents do. You handle: input resolution, 
 
 Get `FUNCTION_NAME` (required) and optional `doc_root` (else search `<docs_root>` for the function dir from the profile card). Confirm SD.md is readable; if not, stop: "❌ Cannot find SD.md for <FUNCTION_NAME>." Determine module + entry_point + entry_type from SD.md / DEPENDENCIES.md.
 
+**Fast-profile check**: grep SD.md's first 15 lines for `analysis_profile: fast`. If present, this
+SD came from a fast run and never went through the per-stage 9.0 precision loop — verifying it
+will report an inflated `diff_rate` that reflects the profile rather than a real quality gap. Warn
+and require explicit confirmation before proceeding, recommending `/start-analysis <feature>
+--full` first. This does not apply to the verify phase a fast run performs internally at the end
+of its own pipeline; that one is by design.
+
 ### Step 1 — Harness init
 
 `run_id = <timestamp>-verify-<feature>`. Create `<harness_dir>/<run_id>/`. Copy `${CLAUDE_PLUGIN_ROOT}/templates/harness/verify-state.json` → state.json and fill it. Resolve `verify_round` and `prior_diff_rate` from `<doc_root>/verify-report.md`; if absent, read legacy `<doc_root>/SD-review.md` as fallback only. This run's round = prior + 1. Resolve `threshold`: round 1 → 0.20, round 2 → 0.15, round ≥3 → 0.10. Write `verify_round`, `threshold`, `prior_diff_rate`, `patch_mode="standalone"` into state.json. Write `handoff-init-to-mock.md` and `handoff-init-to-e2e.md` (doc_root, feature, module, entry_point). Read back to verify; on failure stop. Always: read whole file → modify in memory → write back whole.

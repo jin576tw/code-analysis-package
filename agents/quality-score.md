@@ -68,6 +68,34 @@ Before assigning any score, produce a **candidate defect list**:
    forbidden anywhere in `repair_actions`; if a finding is truly low-impact,
    still phrase it as a concrete fix instruction, not a soft suggestion.
 
+## Pattern sweep (mandatory whenever a defect is found)
+
+Sampling finds isolated instances; it does not tell you whether the same
+mistake repeats elsewhere in the document. A defect found during the spot-check
+or defect-first pass is evidence of a **defect class**, not a single typo —
+treat it as such before finalizing repair actions:
+
+1. Classify the defect (e.g. "off-by-one line-citation", "editable/read-only
+   claim contradicts another section", "table row states a fact another
+   section already stated differently", "example payload omits fields the
+   prose says are sent").
+2. Grep/search the **whole current document** (not just the sampled claims)
+   for every other place the same fact type appears — other line-citation
+   ranges for the same or sibling methods, other editability claims for
+   related fields, other worked examples of the same API call, etc.
+3. Check each occurrence found this way against source/against the rest of the
+   document. Add every confirmed instance to the defect list and to
+   `repair_actions` — not just the occurrence the sample happened to land on.
+4. A repair action that fixes only the sampled instance while a sibling
+   instance of the identical defect remains elsewhere in the same document is
+   an incomplete repair action; do not write it that way — enumerate all
+   confirmed instances in one repair action (or one per instance, but all of
+   them), so a single repair pass can close the whole defect class instead of
+   surfacing the next instance in the following round.
+
+This sweep is scoped to the document(s) you are scoring now — do not expand it
+into a full re-analysis of upstream/downstream docs.
+
 ## Score formula
 
 Score each dimension from 0 to 5 (one decimal allowed):
@@ -229,6 +257,14 @@ one decimal, 0–10), `score_breakdown`, `spot_check: {"sampled": N, "passed": M
 `structural_flags`, `score_attempts`, `repair_actions`, `gap_report_path`. **Do
 not write `quality_gate`** — that field belongs to the orchestrator. For
 structural gaps, also set run-level `pending_human=true`, `affected_stages`.
+
+**Write-back self-check (mandatory, before every `state.json` write)**: confirm your payload
+contains **no `quality_gate` key**. If you are editing a stage object that already has one (from
+an earlier round), leave its existing value untouched — do not refresh, recompute, or "correct"
+it. This has been violated in practice: scorecards were observed writing gate verdicts that the
+orchestrator then had to overwrite, which quietly re-merges the evaluator and judge roles that
+the mechanical-gate design exists to keep apart. Reporting a score is your whole job; deciding
+what the score means is not.
 
 ## Report
 

@@ -191,3 +191,45 @@ Confidence mapping (per §8):
 - **High**: derived directly from if/else, switch, method calls.
 - **Medium**: from variable/constant naming or context inference.
 - **Low**: inferred from code comments (comments are speculation).
+
+---
+
+## 12. Fast-profile document banner
+
+When the orchestrator dispatches you with `analysis_profile=fast`, you **must** write a
+provenance banner into every document you produce. The banner is what tells a future reader —
+and a future full-profile run — that this document has not been through the per-stage precision
+loop. It is written by **you** (the worker), not by the orchestrator: the orchestrator is
+forbidden from editing files under `<docs_root>` directly.
+
+**Placement**: immediately after the `> **Entry Point**:` line, before any other content.
+
+**Verbatim template** (fill every `<...>` from the values passed in your dispatch prompt; leave a
+placeholder only if the value genuinely is not yet known at write time):
+
+```markdown
+> 🚀 **FAST-MODE 產出（架構認知用草稿，非交付級分析）**
+> `analysis_profile: fast` | run_id: <run_id> | generated: <YYYY-MM-DD>
+> 本文件通過「結構正確性」gate（四項矛盾型 structural_flags 全 false、Completeness ≥ 3.0），
+> **未經** per-stage `score_10 >= 9.0` 精確度迴圈。行號 / 欄位級引用僅由結尾一次
+> spec-vs-code verify 批次校正，可能仍有偏移。
+> 產出範圍與完整模式相同（含 ui-verify 與 Layer 5 verify），差異僅在未做逐階段精度修補。
+> ⛔ 不得作為交付依據。補全指令：`/start-analysis <功能> --full`
+```
+
+**Rules**:
+
+1. `analysis_profile: fast` must appear **verbatim** — it is the machine-readable marker that
+   `start-analysis` greps for when deciding whether a later full run may reuse this document.
+2. Do **not** write the banner when dispatched with `analysis_profile=full` (or with no profile
+   given — absence means `full`).
+3. When a full-profile run upgrades a fast document and it clears the 9.0 gate, the banner is
+   **rewritten** to `analysis_profile: full` rather than deleted, so the upgrade remains visible
+   in the document's own history.
+4. **§13-equivalent confidence tightening**: in a fast-profile document, any bug candidate or
+   static inference must be labelled at confidence **低（靜態推論，待 stack trace）** at most.
+   Fast output is less verified than full output, so the labelling obligation is stricter, not
+   looser. Never write `已確認` / `confirmed` / `HIGH confidence` in a fast document.
+5. The banner states the profile, not a quality verdict — do not editorialise it, soften it, or
+   omit the ⛔ line. A reader who skips the banner is exactly the failure mode it exists to
+   prevent.

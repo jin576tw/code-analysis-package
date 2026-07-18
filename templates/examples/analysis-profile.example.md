@@ -83,7 +83,7 @@ to find the ManagedBean method; WS — endpoint class annotated `@WebService` ex
 - **Docs output root**: `.analysis/docs`
 - **Path convention**: `<root>/<module>/<feature>/<page>/<function>/<TYPE>.md`
   (merge page+function into one level when identical)
-- **Cross-feature overview location**: `<root>/_global/<feature>-<entry>-overview/`
+- **Cross-feature overview location**: `<root>/_global/<feature>-overview/`
 
 ## 8. UI verification (optional)
 
