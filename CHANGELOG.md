@@ -3,7 +3,7 @@
 All notable changes to this plugin are documented here.
 This project adheres to [Semantic Versioning](https://semver.org).
 
-## [Unreleased]
+## [0.10.0] - 2026-07-25
 
 ### Added
 - **Scope card (Layer 0.5)** — a new step before `deps`: produces `SCOPE.md` from
