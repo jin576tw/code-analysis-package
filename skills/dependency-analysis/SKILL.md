@@ -138,6 +138,16 @@ Record providers in the "Upstream data sources" section of `DEPENDENCIES.md`.
 
 > Omit this section if reverse tracking found no providers.
 
+### Cross-feature relations
+| Relation type | Target | Purpose | Visibility | Doc link |
+|----------------|--------|---------|------------|----------|
+| cross-feature | (other feature's function/service) | (why this fn depends on it) | code-derived / inferred / business-input (see `analysis-conventions` §8a) | (existing doc path, or "pending: not yet analysed") |
+
+Cite, do not inline — link to the other feature's own analysis doc rather than copying its logic
+in (avoids two documents drifting apart after independent updates). If the Scope Card (Layer 0.5)
+already enumerated this relation, reuse its visibility grade rather than re-deriving it. Omit this
+section if no cross-feature relations were found.
+
 ### Items needing human review
 Append the "⚠️ Items needing human review" section (format in
 `analysis-conventions` §11). For DEPENDENCIES focus on: external system real

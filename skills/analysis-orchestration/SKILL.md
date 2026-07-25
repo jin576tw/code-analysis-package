@@ -146,6 +146,8 @@ Cross-feature overviews go under `<docs_root>/_global/<feature>-overview/` (the 
 ```
 Layer 0:   entry confirmation (hard gate — ticket screenshot or user confirmation)
               ↓
+Layer 0.5: scope card (SCOPE.md — directed relation scan + scope boundary; user confirms before ①)
+              ↓
 Layer 1:   deps  (Batch entry: run batch-analysis first)
               ↓
 Layer 2:   vars ‖ erd ‖ funcs   (parallel; depend on ①; scored in ONE batched quality-score call)
@@ -160,6 +162,24 @@ Layer 4b:  api-contract (WS/API only) → sa   (depend on ⑦⑤⑥)
               ↓
 Layer 5:   auto-verify — vspec-e2e ‖ (vspec-mock, default skipped) → vspec-static (direct-claims by default) → vspec-report → vspec-patch
 ```
+
+## Scope card (Layer 0.5)
+
+Before dispatching `deps`, produce `<doc_root>/SCOPE.md` from `templates/scope-card.md` — "what is
+this run about, and what does it touch", decided *before* the DAG starts rather than discovered
+document by document. It is a **directed, cheap scan**, not a project-wide relation index (that
+duplicates `deps`' job): (1) the entry point's navigation position, (2) the endpoints/tables the
+entry point itself calls, cross-checked only against **existing analysed docs** (not a full-repo
+sweep) plus sibling entries at the same navigation level, (3) an explicit in-scope vs.
+cross-reference-only boundary, with every relation tagged by **visibility grade** (see
+`analysis-conventions` — code-derived / inferred / business-input). Anything code cannot show
+(business-process sequencing, cross-service timing, workflow-engine definitions) is tagged
+`business-input — pending`, not guessed at.
+
+Stop and get explicit user confirmation of the scope before proceeding to run-state init. SCOPE.md
+is not scored by `quality-score` — it is a scoping convention, regenerable as the menu/doc set
+changes, not an analysis deliverable. Its cross-feature list feeds `deps`' upstream-tracking step
+(`dependency-analysis` skill §4) instead of leaving that judgment to `deps` alone.
 
 ## Quality gate
 
@@ -188,16 +208,31 @@ round(weighted_score_5 * 2, 1)`; pass threshold is `score_10 >= 9.0`.
 
 ### Full-profile gate derivation (orchestrator-owned, mechanical — not a judgment call)
 
+A stage lands in exactly one of three buckets: **passed** (≥9.0), **auto-continue with recorded
+tech debt** (pure precision gap, no wrong-direction risk), or **hard-stop for a human** (a
+wrong-direction or coverage risk). This replaces ad-hoc in-the-moment "flags are false so let's
+just continue" calls with a mechanical rule, so the same input always produces the same decision.
+
 1. `quality/<stage>-score.md` missing or `quality_score` not a valid `[0,10]`
    float → re-run `quality-score` once; still invalid → `failed_local`.
-2. Any `structural_flags` entry `true`, or `quality_score < 8.0`, or
-   `structural_flags.completeness_lt_4` → `failed_structural`: write/confirm
-   gap report, set `pending_human=true`, stop downstream, ask for confirmation.
-3. `quality_score >= 9.0` → `passed`, continue.
-4. `8.0 <= quality_score < 9.0` → `repairing`: repair from `repair_actions`,
-   rescore. Repair cap: 1 attempt for Layer 2 stages, 2 for all others. Cap
-   exhausted and still `< 9.0` → `failed_local`: stop, ask user to accept risk
-   / repair manually / abandon.
+2. **Hard-stop — contradiction-type risk**: any of `entry_point_wrong` / `api_boundary_wrong` /
+   `data_table_wrong` / `main_flow_wrong` is `true` → `failed_structural`. Write the structured
+   gap-report worksheet (mandatory — see "Gap-report worksheet" below), set `pending_human=true`,
+   stop downstream.
+3. **Hard-stop — coverage risk**: `structural_flags.completeness_lt_4` is `true`, or
+   `quality_score < 6.0` → `failed_structural` (same worksheet requirement as rule 2 — an omission
+   hole does not qualify for the tech-debt bucket).
+4. `quality_score >= 9.0` → `passed`, continue.
+5. `quality_score < 9.0` with all of rule 2/3's flags `false` and `quality_score >= 6.0` →
+   `repairing`: repair from `repair_actions`, rescore. Repair cap: 1 attempt for Layer 2 stages, 2
+   for all others.
+   - Rescore reaches `>= 9.0` → `passed`.
+   - Cap exhausted, still in `[6.0, 9.0)`, flags still all `false` → **`tech_debt_accepted`**: a
+     pure citation/precision gap — record it in `_pending/human-review-queue.md` and **continue to
+     downstream stages automatically**, no per-run question. The end-of-run Layer 5 verify is this
+     bucket's designated backstop.
+   - Cap exhausted but a flag flipped `true`, or score fell below `6.0` → `failed_structural`
+     (rules 2/3 apply retroactively; a repair must not silently mask a regression it caused).
 
 ### Fast-profile gate derivation
 
@@ -244,23 +279,50 @@ the risk (→ `accepted_risk`, see below) / change strategy (full regeneration, 
 narrower scope) / abandon. **Do not silently start another round.** Repeated fixing without
 monotonic improvement means the strategy is wrong, not that one more round is needed.
 
+### Gap-report worksheet (mandatory for every `failed_structural`)
+
+A hard-stop must hand the human a **row-by-row worksheet**, not just a halt — and the worksheet's
+completion is the resume precondition, not a courtesy document. `quality-score` writes
+`<stage>-gap-report.md` containing a structured table, one row per open question:
+
+| # | Open question | Why it can't be auto-resolved | What a human needs to supply | Downstream docs affected | Decision (✅ confirmed / ❌ corrected to …) |
+
+- Gap report without this table → `quality-score` is incomplete for this stage: re-dispatch once
+  to produce it; still missing → do not resume.
+- Table present but any row's Decision cell empty → run stays `stopped-needs-human`; downstream
+  stages do not resume. On resume, every row must be filled (✅/❌) before continuing; ❌ rows route
+  back to the producing worker first.
+- Append one row per open item to `<docs_root>/_pending/human-review-queue.md` (from
+  `templates/human-review-queue.md`) — the durable cross-run rollup; the gap report is the per-run
+  working surface.
+
+Structural gaps stop automatic flow when the gap affects entry points, API boundaries, data
+tables, main flow, more than two documents, or downstream docs already depend on a wrong premise.
+
+### `tech_debt_accepted`
+
+Terminal gate value for the auto-continue bucket (full-profile derivation rule 5): a pure
+precision/citation gap, every structural flag `false`, repair cap exhausted, still below 9.0.
+**Not** `passed`, and — unlike a gap-report hard-stop — does **not** block downstream stages.
+Append a row to `_pending/human-review-queue.md` (status `open`) without setting
+`pending_human=true` for this reason alone.
+
 ### `accepted_risk`
 
-A terminal gate value for "a human looked at a sub-threshold result and chose to proceed". It is
-**not** a synonym for `passed`. Whenever it is written:
+A terminal gate value for "a human looked at a sub-threshold result — typically via the
+convergence circuit breaker below — and explicitly chose to proceed". It is **not** a synonym for
+`passed`, and it is **not** the same as `tech_debt_accepted` (automatic, no question asked;
+`accepted_risk` always follows a human decision point). Whenever it is written:
 
 - `resume_decision` is **mandatory** — who decided, on what score/flag evidence, and what residual
   risk they accepted.
 - `summary.md` and the `runs.md` row must show it distinctly, so a later reader cannot mistake the
   stage for having met the threshold.
+- Append a row to `_pending/human-review-queue.md`.
 
 For Layer 2 (vars/erd/funcs), dispatch `quality-score` **once** in batch mode;
 it returns three independent scorecards and state updates, judged
 independently — a repair on one does not require repairing the other two.
-
-Structural gaps produce `<stage>-gap-report.md` and stop automatic flow when
-the gap affects entry points, API boundaries, data tables, main flow, more
-than two documents, or downstream docs already depend on a wrong premise.
 
 ## Auto-verify policy & deferral
 
@@ -312,9 +374,14 @@ tightening. Treat a fast run above the round-1 threshold (0.20 by default) as ev
 reporting, not as routine.
 
 ## Execution steps
+- **Step -1 — human-review-queue rollup**: at startup, if `_pending/human-review-queue.md` has
+  open rows, print the count (split out how many are blocking `stopped-needs-human` worksheet
+  rows) before anything else.
 - **Step 0 — entry confirmation**: confirm the entry point from a ticket
   screenshot or the user before proceeding (hard gate; see the orchestrator's
   Step 3.0).
+- **Step 0.5 — scope card**: produce and get user confirmation of `SCOPE.md` (see "Scope card
+  (Layer 0.5)" above) before dispatching `deps`.
 - **Step 1 — path & entry type**: determine MODULE/FEATURE/PAGE and entry-point
   type. For a batch entry point, run `batch-analysis` first.
 - **Step 2 — scan existing docs**: check which of the 10 already exist. For each one found,

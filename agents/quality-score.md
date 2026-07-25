@@ -1,6 +1,6 @@
 ---
 name: quality-score
-description: Read-only analysis quality gate. Scores one completed analysis stage using source evidence, a defect-first search, and a mandatory accuracy spot-check against source. Produces <stage>-score.md (and <stage>-gap-report.md for structural gaps); updates harness state quality fields without editing analysis docs. Does NOT classify the gate — the orchestrator derives passed/repairing/failed_local/failed_structural/pending_human mechanically from score_10 and structural_flags.
+description: Read-only analysis quality gate. Scores one completed analysis stage using source evidence, a defect-first search, and a mandatory accuracy spot-check against source. Produces <stage>-score.md (and a <stage>-gap-report.md worksheet — one row per open question, blocking until each Decision cell is filled — for structural gaps); updates harness state quality fields without editing analysis docs. Does NOT classify the gate — the orchestrator derives passed/repairing/failed_local/failed_structural/tech_debt_accepted/pending_human mechanically from score_10 and structural_flags.
 model: sonnet
 tools: Read, Write, Edit, Grep, Glob
 skills: analysis-conventions
@@ -230,13 +230,24 @@ Sampled: N ｜ Passed: M ｜ Pass rate: X%
 ```
 
 If any structural flag is `true`, also write
-`<harness_dir>/<run_id>/quality/<stage>-gap-report.md`:
+`<harness_dir>/<run_id>/quality/<stage>-gap-report.md`. This is **not optional prose** — the run
+cannot resume past this stage until every row's Decision cell below is filled by a human, so the
+table must be genuinely row-per-open-question, not a summary paragraph with a table pasted on top:
 
 ```markdown
 # Gap Report — <stage>
 
 ## Gap summary
 <what is broken>
+
+## Open questions (worksheet — resume is blocked until every Decision cell is filled)
+
+| # | Open question | Why it can't be auto-resolved | What a human needs to supply | Downstream docs affected | Decision (✅ confirmed / ❌ corrected to …) |
+|---|----------------|--------------------------------|-------------------------------|----------------------------|----------------------------------------------|
+| 1 | <the specific thing that needs a human call> | <flag/evidence that makes this undecidable from source alone> | <what input resolves it> | <doc list> | |
+
+One row per open question — do not collapse multiple distinct defects into one row, and do not
+leave the Decision column pre-filled with a guess (empty is correct until a human fills it).
 
 ## Affected stages/docs
 <list>

@@ -47,7 +47,12 @@ Read `${CLAUDE_PROJECT_DIR}/.analysis-profile.md`. Validate:
 If any field is blank or placeholder, stop:
 `❌ Profile incomplete — <field(s)> not set. Run /analysis-init to regenerate the profile card.`
 
-Scan `<harness_dir>/*/state.json` for incomplete runs (any stage status ∉ {done, skipped, deferred}; `running` = session-interrupted, treat as pending; `blocked` = session-limit hit, treat as pending). Runs whose top-level `status == "verify-deferred"` are **not** incomplete runs — they were intentionally paused before the vspec phase and do not trigger the resume prompt; print one summary line instead: `ℹ️ N run(s) awaiting verify (see verify-backlog.md)`. For any other incomplete run found, ask: resume / new / abandon.
+**Human-review-queue rollup**: if `<docs_root>/_pending/human-review-queue.md` exists, count rows
+with `status == open`. If any, print `⚠️ N item(s) pending human review (M blocking — undecided
+gap-report worksheet rows — see _pending/human-review-queue.md)` before anything else, where M is
+the subset belonging to runs currently `stopped-needs-human`.
+
+Scan `<harness_dir>/*/state.json` for incomplete runs (any stage status ∉ {done, skipped, deferred}; `running` = session-interrupted, treat as pending; `blocked` = session-limit hit, treat as pending). Runs whose top-level `status == "verify-deferred"` are **not** incomplete runs — they were intentionally paused before the vspec phase and do not trigger the resume prompt; print one summary line instead: `ℹ️ N run(s) awaiting verify (see verify-backlog.md)`. Runs whose top-level `status == "stopped-needs-human"` also skip the generic resume/new/abandon prompt — go straight to the §5d.1 worksheet check: any gap-report row with an empty Decision cell blocks resume outright (report which rows, do not proceed); once all rows are decided, resume normally (❌ rows first route back to the producing worker). For any other incomplete run found, ask: resume / new / abandon.
 - **resume**: re-dispatch pending/running/blocked stages in DAG order (reset to pending; do not increment retry_count).
   **Before re-dispatching, check each `done` stage for an un-scored repair**: if
   `repair_applied_at` is non-null and later than the stage's `ended_at` of its last scoring round,
@@ -92,6 +97,34 @@ from a ticket title or summary:
   `state.json`.
 - If the entry point cannot be confirmed and the user has not explicitly waived
   confirmation, **do not dispatch `deps`** — stop and ask.
+
+### 3.0.5 Scope card (Layer 0.5 — scoping, not analysis)
+
+Before dispatching `deps`, produce `<doc_root>/SCOPE.md` — a short, **regenerable** artefact
+answering "what is this run about, and what does it touch" *before* the DAG starts, rather than
+letting scope drift get discovered document by document. This is a deliberately **cheap, directed
+scan** — three specific lookups, not a project-wide relation index (that would duplicate `deps`'
+job and is out of scope here):
+
+1. **Target**: entry point + its position in the project's navigation/menu source (same source
+   used for `<MODULE>/<FEATURE>` in §3).
+2. **Directed relation scan** (bounded, no full-repo sweep):
+   - Endpoints/calls the target entry point itself makes (grep the entry file(s) only).
+   - Whether those endpoints/tables are **already referenced by an existing analysed doc** under
+     `<docs_root>` (compare against existing docs only — do not grep the whole source tree for
+     this step).
+   - Sibling entries at the same navigation level (from the same menu/route source as step 1).
+3. **Scope boundary**: an explicit list — what this run will analyse in full vs. what it will only
+   cross-reference (cross-feature citation, not expansion). Tag every relation found in step 2 with
+   a **visibility grade** (see `analysis-conventions` — code-derived / inferred / business-input).
+   Anything outside what code can show (business-process sequencing, cross-service timing,
+   workflow-engine definitions) is tagged `business-input — pending` rather than guessed at.
+
+**Stop and ask the user to confirm the scope** (include/exclude adjustments) before proceeding to
+§4 run-state init. SCOPE.md is not scored by `quality-score` (it is a scoping convention, not an
+analysis deliverable) and may be regenerated freely as the menu/doc set changes. Its cross-feature
+list feeds `deps`' upstream-tracking step (dependency-analysis skill §4) instead of leaving that
+judgment to `deps` alone.
 
 ### 3. Path & entry type
 
@@ -205,22 +238,38 @@ decide mechanically. **Which derivation applies is determined by `analysis_profi
 
 #### 5a. Full-profile gate derivation
 
+A stage lands in exactly one of three buckets: **passed** (clears 9.0), **auto-continue with
+recorded tech debt** (a pure precision gap, no wrong-direction risk), or **hard-stop for a human**
+(a wrong-direction or coverage risk). Which bucket applies is mechanical, not a per-run judgment
+call — this replaces ad-hoc "the flags are all false so let's just continue" decisions made in the
+moment, which leave no durable record.
+
 1. **Validity check**: `quality/<stage>-score.md` must exist and
    `quality_score` must be a float in `[0, 10]`. If missing/invalid →
    re-dispatch `quality-score` once; if still invalid → `quality_gate =
    failed_local`, stop that branch, report.
-2. If any `structural_flags` entry is `true`, or `quality_score < 8.0`, or
-   `structural_flags.completeness_lt_4 == true` → `quality_gate =
-   failed_structural`. Write/confirm the gap report, set `pending_human =
-   true`, stop affected downstream stages, and ask for human confirmation.
-3. Else if `quality_score >= 9.0` → `quality_gate = passed`, continue.
-4. Else (`8.0 <= quality_score < 9.0`) → `quality_gate = repairing`: build a
-   same-stage repair prompt from `repair_actions`, re-dispatch the same worker,
-   then re-run `quality-score`. Repair attempt cap: **1** for Layer 2
-   (vars/erd/funcs), **2** for all other stages. If the cap is exhausted and
-   `quality_score` is still `< 9.0` → `quality_gate = failed_local`; stop that
-   branch and ask the user to choose: accept the risk and continue / repair
-   manually / abandon.
+2. **Hard-stop — contradiction-type risk**: any of `entry_point_wrong`,
+   `api_boundary_wrong`, `data_table_wrong`, `main_flow_wrong` is `true` → `quality_gate =
+   failed_structural`. These are wrong-direction risks; full profile does not push through them.
+   Go to **§5d.1 gap-report worksheet** (mandatory) before stopping.
+3. **Hard-stop — coverage risk**: `structural_flags.completeness_lt_4 == true` or `quality_score <
+   6.0` → `quality_gate = failed_structural`. A real coverage hole or sanity-floor failure is an
+   omission risk, not mere imprecision — it does not qualify for the tech-debt bucket below. Go to
+   **§5d.1 gap-report worksheet** (mandatory) before stopping.
+4. Else if `quality_score >= 9.0` → `quality_gate = passed`, continue.
+5. Else (`quality_score < 9.0`, all four contradiction-type flags `false`, `completeness_lt_4 ==
+   false`, `quality_score >= 6.0`) → `quality_gate = repairing`: build a same-stage repair prompt
+   from `repair_actions`, re-dispatch the same worker, then re-run `quality-score`. Repair attempt
+   cap: **1** for Layer 2 (vars/erd/funcs), **2** for all other stages.
+   - Re-score reaches `>= 9.0` → `passed`.
+   - Cap exhausted and `quality_score` is still in `[6.0, 9.0)` with every flag still `false` →
+     **`quality_gate = tech_debt_accepted`** (§5d.2): this is a pure citation/precision gap with no
+     structural risk — record it and **continue to downstream stages automatically**, no
+     per-run question. The end-of-run Layer 5 verify sweep (§5.5) is the designated backstop for
+     this bucket.
+   - Cap exhausted and any flag flipped `true` during repair, or `quality_score` fell below `6.0`
+     → `failed_structural` (rule 2/3 applies retroactively — repair must not silently mask a
+     structural regression it introduced).
 
 #### 5b. Fast-profile gate derivation
 
@@ -246,11 +295,49 @@ consecutive** rounds. Offer exactly three options — accept the risk (→ `acce
 strategy (full regeneration, different model, narrower scope) / abandon. **Never silently start
 another round**: non-monotonic scores mean the strategy is wrong, not that one more round lands it.
 
-#### 5d. `accepted_risk`
+#### 5d. Human-in-the-loop bookkeeping
 
-Terminal gate value meaning "a human saw a sub-threshold result and chose to proceed" — **not**
-`passed`. Writing it requires also writing `resume_decision` (who decided, on what evidence, what
-residual risk), and both `summary.md` and the `runs.md` row must display it distinctly.
+##### 5d.1 Gap-report worksheet — mandatory before any `failed_structural` / hard-stop
+
+A hard-stop must never be "just stop and wait" — it must hand the human a **row-by-row worksheet**
+they can act on, and that worksheet's completion is itself the resume precondition, not a courtesy
+document.
+
+- `quality-score` writes `<harness_dir>/<run_id>/quality/<stage>-gap-report.md` containing a
+  structured table (not prose alone):
+
+  | # | Open question | Why it can't be auto-resolved (flag/evidence) | What a human needs to supply | Downstream docs affected | Decision (✅ confirmed / ❌ corrected to …) |
+
+- **If the gap report exists without this table** → treat `quality-score` as incomplete for this
+  stage: re-dispatch it once to produce the table; still missing → do not resume this stage.
+- **If the table exists but any row's Decision cell is empty** → the run stays
+  `stopped-needs-human`; **do not resume downstream stages**. On resume, check every row: all
+  filled (✅/❌) → continue (❌ rows first route back to the producing worker to regenerate the
+  affected section); any empty → refuse resume and report which rows are still open.
+- Append one row per open item to `<docs_root>/_pending/human-review-queue.md` (create from
+  `${CLAUDE_PLUGIN_ROOT}/templates/human-review-queue.md` if absent): `run_id | doc | stage | gate
+  | score | open questions (link to the gap-report worksheet) | recommended action | status |
+  date`. This is the durable, cross-run rollup; the gap report is the per-run working surface.
+- Set run-level `pending_human = true` and top-level `status = "stopped-needs-human"` (distinct
+  from `partial`/`paused`/`verify-deferred` — this state means "stopped, worksheet pending", not
+  "half-run").
+
+##### 5d.2 `tech_debt_accepted`
+
+Terminal gate value for the auto-continue bucket in §5a rule 5: a pure precision/citation gap with
+every structural flag `false`, repair cap exhausted, still below 9.0. **Not** a synonym for
+`passed`, and — unlike §5d.1 — **does not block downstream stages**. Append one row to
+`_pending/human-review-queue.md` with status `open` (the debt is real and should surface in the
+rollup) but do not set `pending_human = true` for this reason alone.
+
+##### 5d.3 `accepted_risk`
+
+Terminal gate value meaning "a human saw a sub-threshold result — typically via the §5c circuit
+breaker — and explicitly chose to proceed" — **not** `passed` and **not** the same as
+`tech_debt_accepted` (which is an automatic, no-question-asked classification; `accepted_risk`
+always follows a human decision point). Writing it requires also writing `resume_decision` (who
+decided, on what evidence, what residual risk), and both `summary.md` and the `runs.md` row must
+display it distinctly. Also append a row to `_pending/human-review-queue.md`.
 
 Write the decided `quality_gate` value into the stage's `state.json` entry
 yourself (quality-score does not write this field — if you find that key already present in a
@@ -329,7 +416,7 @@ Read `diff_rate` and `threshold` from state.json after vspec-patch completes.
 
 ### 6. Summary
 
-Write `<harness_dir>/<run_id>/summary.md`: **`analysis_profile`**, stage list with status/doc paths/confidence/pending-review totals, `quality_score / quality_gate / score_attempts / spot_check(passed/sampled) / structural_flags`, low-confidence stages (⚠️ prefix), gap-report links, the quality/diff calibration table (§5.6a), spec quality block (diff_rate ✅/⚠️, verify-report path, verify_round, threshold, patch summary: N patched / M deferred / patch_plan_path). If `diff_rate > threshold`, include the advisory note. If the run status is `verify-deferred`, state that clearly with a pointer to `verify-backlog.md`.
+Write `<harness_dir>/<run_id>/summary.md`: **`analysis_profile`**, `SCOPE.md` path, stage list with status/doc paths/confidence/pending-review totals, `quality_score / quality_gate / score_attempts / spot_check(passed/sampled) / structural_flags`, low-confidence stages (⚠️ prefix), gap-report links, any `tech_debt_accepted` stages (flagged distinctly from `passed`), the quality/diff calibration table (§5.6a), spec quality block (diff_rate ✅/⚠️, verify-report path, verify_round, threshold, patch summary: N patched / M deferred / patch_plan_path). If `diff_rate > threshold`, include the advisory note. If the run status is `verify-deferred`, state that clearly with a pointer to `verify-backlog.md`. If the run status is `stopped-needs-human`, state that clearly with the count of undecided worksheet rows and a pointer to the gap report + `_pending/human-review-queue.md`.
 
 **Fast-run summary additions**: state `profile=fast` prominently at the top together with a line
 declaring the output draft-grade and not a delivery basis; list each stage's `fast_pass` verdict

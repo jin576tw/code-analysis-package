@@ -1,9 +1,9 @@
 {
-  "_schema_version": "1.4",
+  "_schema_version": "1.5",
   "_enums": {
-    "quality_gate": "null (initial) | skipped | passed | repairing | failed_local | failed_structural | fast_pass | accepted_risk",
+    "quality_gate": "null (initial) | skipped | passed | repairing | failed_local | failed_structural | fast_pass | tech_debt_accepted | accepted_risk",
     "analysis_profile": "full | fast",
-    "note": "fast_pass = fast profile structural gate cleared (score_10 may be < 9.0). accepted_risk = human explicitly accepted a sub-threshold result; resume_decision is mandatory. Neither is equivalent to passed."
+    "note": "fast_pass = fast profile structural gate cleared (score_10 may be < 9.0). tech_debt_accepted = full profile, repair cap exhausted, still <9.0 but all structural flags false — auto-continue, recorded in _pending/human-review-queue.md, no per-run question. accepted_risk = human explicitly accepted a sub-threshold result (typically via the §5c circuit breaker); resume_decision is mandatory. None of the three is equivalent to passed."
   },
   "run_id": "<timestamp>-<feature>",
   "feature": "<feature>",
@@ -12,9 +12,10 @@
   "mode": "A | B | C",
   "analysis_profile": "full | fast",
   "doc_root": "<docs_root>/<MODULE>/<FEATURE>/<PAGE>/<FUNCTION>",
+  "scope_card_path": null,
   "started_at": "<ISO-8601 +TZ>",
   "ended_at": null,
-  "status": "running | done | failed | partial | verify-deferred",
+  "status": "running | done | failed | partial | verify-deferred | stopped-needs-human",
   "re_analysis_count": 0,
   "diff_rate": null,
   "verify_round": 1,

@@ -80,20 +80,32 @@ first stage). Each document-producing stage — including `ui-verify`,
 run, followed by an automatic verify phase after `sa`:
 
 ```
-[entry confirmation] → deps → (vars ‖ erd ‖ funcs, ONE batched quality-score)
-     → flow → rules → [ui-verify: UI only] → sd → [api-contract: WS/API only] → sa
+[entry confirmation] → [scope card: SCOPE.md, user-confirmed] → deps
+     → (vars ‖ erd ‖ funcs, ONE batched quality-score) → flow → rules
+     → [ui-verify: UI only] → sd → [api-contract: WS/API only] → sa
      → vspec-e2e ‖ (vspec-mock, default skipped) → vspec-static (direct-claims by default)
      → vspec-report → vspec-patch   ← auto verify
 ```
+
+Before `deps`, a **scope card** step produces `SCOPE.md`: a directed, cheap scan (not a
+project-wide relation index) of the entry point's navigation position, the endpoints/tables it
+calls, whether those are already covered by an existing analysed doc, and sibling entries at the
+same navigation level — with every relation graded `code-derived` / `inferred` / `business-input`
+(`analysis-conventions` §8a). The user confirms the scope before `deps` is dispatched.
 
 `quality-score` **does not decide the gate** — it only reports `score_10`
 (weighted from Accuracy 0.30, Completeness 0.25, Testability 0.15, Clarity
 0.10, Non-functional 0.10, Technical 0.10; Accuracy is derived from a mandatory
 ≥8-claim source spot-check), a defect-first candidate-defect list, and
 structural flags. The orchestrator derives `passed` / `repairing` /
-`failed_local` / `failed_structural` / `pending_human` mechanically from those
-fields (`score_10 >= 9.0` to pass; repair cap 1 attempt for Layer 2, 2 for
-other stages).
+`failed_local` / `failed_structural` / `tech_debt_accepted` / `pending_human`
+mechanically from those fields (`score_10 >= 9.0` to pass; repair cap 1 attempt
+for Layer 2, 2 for other stages). A **contradiction-type** structural flag or a
+coverage hole (`completeness_lt_4` / `score_10 < 6.0`) hard-stops the run and
+requires a filled-in gap-report worksheet (one row per open question) before
+resume; a pure precision gap below 9.0 with every flag `false` instead
+auto-continues as `tech_debt_accepted`, recorded in
+`<docs_root>/_pending/human-review-queue.md` for later review.
 
 `verify-code` can also be triggered standalone to re-verify an existing
 `SD.md` without re-running the full analysis pipeline:

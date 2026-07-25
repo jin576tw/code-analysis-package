@@ -88,6 +88,26 @@ When an item cannot be confirmed, first try to find the answer in the code
 | Context inference | inferred from call chains / data flow | Medium |
 | Unconfirmable | cannot be derived from code at all | Very low (list for human review) |
 
+## 8a. Relation visibility grading
+
+Code can mechanically prove **call relationships** (page → endpoint → service → table) and
+**shared resources** (the same endpoint/table used by other features). It cannot show **business-
+process sequencing** (workflow stage order, cross-service timing, human approval steps) — that
+lives in status-code semantics, external specs, or a workflow engine's own definitions, not in the
+call graph. Treat this as a hard boundary, not a gap to paper over with inference: when a document
+lists a cross-feature relation (in `DEPENDENCIES.md` §12-equivalent cross-feature entries, or in a
+Scope Card), grade it explicitly so a reader never mistakes "not documented" for "does not exist":
+
+| Grade | Meaning | Maps to §8 confidence |
+|-------|---------|------------------------|
+| `code-derived` | call relationship or shared endpoint/table, directly provable from source | High |
+| `inferred` | relation suggested by naming/context, not a direct call | Medium |
+| `business-input` | process ordering, cross-service timing, workflow-engine definitions — **code cannot show this**; must be confirmed from a spec or a domain expert, never guessed | requires human confirmation; do not assign a confidence level in place of confirming it |
+
+A `business-input` item is not a failure to analyse deeply enough — it is outside what static
+analysis of this codebase can determine. Tag it `business-input — pending` and stop; do not
+speculate a process order from table/status-code naming and present it as if it were code-derived.
+
 ---
 
 ## 9. Audience tone (for output documents)

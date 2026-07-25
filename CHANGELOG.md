@@ -3,6 +3,38 @@
 All notable changes to this plugin are documented here.
 This project adheres to [Semantic Versioning](https://semver.org).
 
+## [Unreleased]
+
+### Added
+- **Scope card (Layer 0.5)** — a new step before `deps`: produces `SCOPE.md` from
+  `templates/scope-card.md`, a directed/cheap relation scan (entry point's own calls, sibling
+  entries, overlap with already-analysed docs) with a user-confirmed in-scope/cross-reference-only
+  boundary. Not scored by `quality-score`; regenerable as the project's docs evolve. Feeds
+  `dependency-analysis`'s upstream-tracking step instead of leaving scope framing to `deps` alone.
+- **Relation visibility grading** (`analysis-conventions` §8a) — `code-derived` / `inferred` /
+  `business-input` classification for cross-feature relations, making explicit the boundary code
+  can and cannot see (call graphs and shared resources are provable; business-process sequencing
+  and workflow-engine timing are not). Applied in Scope Card relation rows and
+  `dependency-analysis`'s new "Cross-feature relations" table.
+- **`tech_debt_accepted` gate value** — full-profile stages that exhaust the repair cap while
+  staying in `[6.0, 9.0)` with every structural flag `false` (a pure citation/precision gap, not a
+  wrong-direction risk) now auto-continue instead of stopping for a per-run human decision. Backed
+  by the end-of-run Layer 5 verify sweep as before.
+- **Gap-report worksheet** — every `failed_structural` gap report now requires a row-per-open-
+  question table with a Decision cell (✅/❌); resume is blocked until every cell is filled. Replaces
+  free-form "Recommended resume options" prose as the resume precondition.
+- **`_pending/human-review-queue.md`** — cross-run rollup (from `templates/human-review-queue.md`)
+  of every `failed_structural` / `tech_debt_accepted` / `accepted_risk` item, living under
+  `docs_root` (not the harness dir, which is subject to 7-day cleanup) so it survives across runs.
+  `start-analysis` prints an open-item count at startup.
+- `state.json` schema bumped to **1.5**: new `scope_card_path` field; `status` enum gains
+  `stopped-needs-human`; `quality_gate` enum gains `tech_debt_accepted`.
+
+### Changed
+- Full-profile gate derivation rewritten as three buckets (passed / auto-continue-with-tech-debt /
+  hard-stop-for-human) instead of a single repair-then-`failed_local` path, so the same input
+  always produces the same decision without an in-the-moment judgment call.
+
 ## [0.9.0] - 2026-07-18
 
 ### Added
