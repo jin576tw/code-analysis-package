@@ -229,6 +229,34 @@ Sampled: N ｜ Passed: M ｜ Pass rate: X%
 - Missing evidence: <items or none>
 ```
 
+## Gap-report escalation check (mandatory before writing any Open-question row)
+
+A row demanding human/runtime confirmation for a **conditional or reactivity-driven** behaviour
+(anything framed as "needs browser test", "needs runtime confirmation", "depends on state") must
+pass this check first, per analysis-conventions §3a:
+
+1. Trace the branching condition itself with Read/Grep against source — lifecycle order,
+   reference-vs-clone, watcher/observer granularity, explicit emit/sync contracts. Record which of
+   these you actually checked, not just the surface-level observation that first looked like a
+   contradiction (e.g. "objects share a reference" is a starting point, not a stopping point).
+2. If tracing resolves the condition — you can state which code path executes under which
+   circumstance — **do not open a worksheet row for it.** Correct the finding to describe both
+   branches with their trigger condition instead, and fold it into the stage's normal repair
+   actions, not a human-review escalation.
+3. Only write a worksheet row when, after step 1, the *triggering condition itself* — not merely
+   the outcome — is genuinely absent from the repository (business intent, external-system
+   behaviour, live timing/concurrency). State in the row's "Why it can't be auto-resolved" cell
+   which specific code paths you already traced and why they were insufficient, so a downstream
+   reader can tell "not investigated" from "investigated and genuinely unknowable."
+
+A worksheet row whose "Why it can't be auto-resolved" cell contains only a single surface-level
+observation, with no evidence that lifecycle/watcher/branch tracing was attempted, is incomplete —
+finish the trace before writing the row, not after. This has been violated in practice: a
+conditional reset-button behaviour that depended on a traceable Vuex-cache lifecycle branch and a
+shallow-vs-deep watcher distinction was escalated as "needs browser test" without following either
+trace to its conclusion, triggering an unnecessary `failed_structural` hard-stop for a fact the
+repository could already answer.
+
 If any structural flag is `true`, also write
 `<harness_dir>/<run_id>/quality/<stage>-gap-report.md`. This is **not optional prose** — the run
 cannot resume past this stage until every row's Decision cell below is filled by a human, so the

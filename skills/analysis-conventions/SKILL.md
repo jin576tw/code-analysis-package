@@ -42,6 +42,38 @@ When an item cannot be confirmed, first try to find the answer in the code
 (up to 3 attempts). Only after 3 failed attempts list it under the
 "⚠️ Items needing human review" section.
 
+### 3a. Conditional behaviour is not an unknown — trace it, don't test it
+
+A behaviour that depends on a **runtime condition** (cache present or not, prior state, a config
+flag) is not automatically "needs human/runtime confirmation." If the triggering condition itself
+is knowable from code — a lifecycle hook, a stored/cached value's origin, a watcher's `deep`
+option, whether a value is mutated in place vs. reassigned/cloned — trace it to a decision, and
+document **both outcomes as an explicit branch** (a decision diamond in a flowchart, or a stated
+if-condition/else-condition pair in prose), not a single flattened claim. Collapsing a
+code-derivable branch into one asserted outcome, discovering it contradicts source, and then
+escalating to "needs runtime testing" is a process defect, not a legitimate escalation — the branch
+was resolvable the whole time; a human is not needed to describe deterministic control flow.
+
+For stateful/reactive frontend frameworks specifically (Vue/React/similar), before declaring an
+object-mutation or reactivity question unresolvable, trace all of:
+- **Lifecycle order** — which hook runs first, and does a later hook reassign what an earlier hook
+  set up (e.g. a `created()`/`mounted()` branch that replaces a reference established in `data()`)?
+- **Reference vs. clone** — is the value a direct object/array reference (mutating it mutates the
+  original elsewhere) or a spread/deep copy (mutations stay local)?
+- **Watcher/observer granularity** — does a `watch` fire on property mutation, or only on
+  reassignment of the whole value (Vue's `deep: true` vs. the default shallow; equivalent
+  distinctions in other frameworks)? A shallow watcher silently not firing is a code fact, not a
+  runtime unknown.
+- **Explicit sync/emit contracts** — does the component actually emit the update event a `.sync`/
+  two-way-binding pattern implies, or does it silently rely on shared-reference mutation instead?
+
+Escalate to human review only when, after this trace, the fact still depends on something **not
+present in the repository at all** — true business intent, an external system's behaviour, or live
+concurrency/timing that cannot be read off a call graph (analysis-conventions §8a's
+`business-input` boundary). A question of "which of these two code-visible branches executes" is
+answered by describing both branches with their trigger condition, not by asking a human to click
+a button and watch.
+
 ## 4. Analysis focus
 
 - **Ignore comments, focus on data flow** — concentrate on actual logic and how

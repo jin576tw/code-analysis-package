@@ -3,6 +3,29 @@
 All notable changes to this plugin are documented here.
 This project adheres to [Semantic Versioning](https://semver.org).
 
+## [0.10.1] - 2026-07-26
+
+### Fixed
+- **Gap-report escalation was skippable** — `quality-score` could open a `failed_structural`
+  worksheet row demanding human/runtime confirmation for a behaviour that was actually fully
+  resolvable by tracing code (lifecycle hook order, reference-vs-clone, watcher deep/shallow,
+  explicit sync/emit contracts), stopping a run for a fact the repository could already answer.
+  Observed in production: a reset-button's effect on shared query-filter state depended on a
+  Vuex-cache lifecycle branch and a shallow watcher not firing on in-place mutation — both
+  traceable from source — but was escalated as "needs browser test" after only a surface-level
+  "objects share a reference" observation.
+- Added **analysis-conventions §3a** ("Conditional behaviour is not an unknown — trace it, don't
+  test it"): a runtime-condition-dependent behaviour must have its *triggering condition* traced
+  from code before being called unresolvable; if resolvable, document both branches with their
+  trigger condition instead of flattening to one claim or escalating. Includes a concrete
+  trace-before-flag checklist for stateful/reactive frontend frameworks (lifecycle order,
+  reference vs. clone, watcher granularity, sync/emit contracts).
+- Added a **Gap-report escalation check** to `quality-score` (mandatory before writing any
+  Open-question row): a row may not demand runtime/human confirmation for a conditional/reactivity
+  question unless the row's "Why it can't be auto-resolved" cell records which static-trace steps
+  were attempted and why they were insufficient — making the existing "3 attempts before human
+  review" rule (§3) auditable instead of skippable for this defect class.
+
 ## [0.10.0] - 2026-07-25
 
 ### Added
