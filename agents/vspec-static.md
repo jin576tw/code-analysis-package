@@ -15,9 +15,12 @@ STATIC-DIFF entries.
 - **Direct-claims mode (default)**: no mock skeleton input. Extract every
   verifiable claim directly from `SD.md` (and sibling docs it references —
   BUSINESS-RULES.md, FLOWCHART.md, VARIABLE-LIST.md, ERD.md, FUNCTION-LIST.md,
-  API-CONTRACT.md where relevant): method signatures, I/O types, branching,
-  transaction settings, external calls, persisted fields, API paths. Verify
-  each claim directly against real code via the profile module/layer map.
+  API-CONTRACT.md where relevant): method signatures, I/O types, branching
+  (including boolean-operator placement — EXISTS/NOT EXISTS, AND/OR,
+  equals/not-equals; verify against the literal predicate structure, not a
+  paraphrase), transaction settings, external calls, persisted fields, API
+  paths. Verify each claim directly against real code via the profile
+  module/layer map.
 - **Legacy three-layer mode (opt-in fallback)**: only when a mock skeleton
   exists at `<harness_dir>/<run_id>/mock/` (i.e. `vspec-mock` was explicitly
   dispatched). Compare **mock (A)** = what the SD says vs **real code (B)** vs
@@ -44,7 +47,9 @@ analysis docs or real source. No secrets.
    `<harness_dir>` default `.analysis/harness`.
    When writing state.json: read whole file → modify in memory → write back whole.
 2. Per the selected mode, item by item (method signatures, I/O types,
-   branching, transaction settings, external calls, persisted fields), classify:
+   branching — including boolean-operator placement, verified against the
+   literal predicate structure — transaction settings, external calls,
+   persisted fields), classify:
    - ✅ correct — doc matches code.
    - ⚠️ omission — code has it, doc does not describe it.
    - ❌ wrong — doc contradicts code.

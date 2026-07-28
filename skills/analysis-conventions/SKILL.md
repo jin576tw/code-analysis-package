@@ -74,6 +74,18 @@ concurrency/timing that cannot be read off a call graph (analysis-conventions §
 answered by describing both branches with their trigger condition, not by asking a human to click
 a button and watch.
 
+The same discipline applies when **reconstructing** — not just describing — executable logic (SQL,
+pseudocode, boolean expressions) from a business-language summary elsewhere in the docset. A
+summary preserves business intent ("excludes student policies") but not the exact operator
+placement; `NOT EXISTS(x = y)` and `EXISTS(x <> y)` read as equivalent from a summary but are not
+logically equivalent in every data shape. Verify a reconstruction against the literal
+predicate/condition-building source (a `Specification`/`Predicate` class, not the doc that
+describes its effect) before treating it as accurate. Observed in production: an "equivalent SQL"
+section manually added to a report's SA.md reconstructed a `POS_POLICY` exclusion filter as
+`NOT EXISTS(SPECIAL_TYPE = 'STUDENT')` from ERD.md's "excludes student policies" summary, when the
+source `Specification` class actually builds `EXISTS(SPECIAL_TYPE <> 'STUDENT')` — the two behave
+differently for policies with no matching row or with mixed special types across multiple rows.
+
 ## 4. Analysis focus
 
 - **Ignore comments, focus on data flow** — concentrate on actual logic and how

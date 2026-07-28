@@ -78,7 +78,11 @@ treat it as such before finalizing repair actions:
 1. Classify the defect (e.g. "off-by-one line-citation", "editable/read-only
    claim contradicts another section", "table row states a fact another
    section already stated differently", "example payload omits fields the
-   prose says are sent").
+   prose says are sent", "boolean-operator-placement error" — a reconstructed
+   condition writes `NOT EXISTS(x = y)` for source that is actually
+   `EXISTS(x <> y)`, reading as equivalent from a business-language summary
+   but not logically equivalent across all data shapes; verify against the
+   literal predicate-building code, not the summary).
 2. Grep/search the **whole current document** (not just the sampled claims)
    for every other place the same fact type appears — other line-citation
    ranges for the same or sibling methods, other editability claims for

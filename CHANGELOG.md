@@ -3,6 +3,28 @@
 All notable changes to this plugin are documented here.
 This project adheres to [Semantic Versioning](https://semver.org).
 
+## [0.10.2] - 2026-07-27
+
+### Fixed
+- **Manually reconstructed executable content could skip verification** — the orchestrator added a
+  reconstructed "equivalent SQL" section to an analysis doc directly (bypassing worker +
+  `quality-score` dispatch), reasoning that content derived from already-passed upstream docs was
+  safe to write without further checking. A subsequent independent review caught a De Morgan's-law
+  error: the reconstruction wrote `NOT EXISTS(SPECIAL_TYPE = 'STUDENT')` where the source
+  `Specification` class actually builds `EXISTS(SPECIAL_TYPE <> 'STUDENT')` — the two forms read as
+  equivalent from a business-language summary ("excludes student policies") but behave differently
+  for policies with no matching row or with mixed special types across multiple rows.
+- `commands/start-analysis.md`'s orchestrator-boundary statement now explicitly covers this: ad-hoc
+  reconstruction of executable/logical content (SQL, pseudocode, boolean expressions, formulas)
+  must not skip verification even when "derived from already-passed docs" — only editorial-only
+  fixes already fully specified by a completed finding may be applied directly.
+- Extended **analysis-conventions §3a** with a reconstruction-specific paragraph: verify a
+  reconstructed `EXISTS`/`NOT EXISTS`/`AND`/`OR`/equals-negation against the literal
+  predicate/condition-building source, not the business-language summary that describes its effect.
+- Extended `quality-score`'s Pattern-sweep defect-classification list and `vspec-static`'s branching
+  checklist with a "boolean-operator-placement error" example, so the same defect class is caught
+  both during per-stage scoring and the end-of-run verify sweep.
+
 ## [0.10.1] - 2026-07-26
 
 ### Fixed
