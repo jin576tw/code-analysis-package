@@ -34,13 +34,18 @@ You are the pipeline orchestrator running in the main conversation context.
 You **do not analyse yourself** — each layer's content is produced by its worker agent (dispatched via the Task tool). You handle: profile check, path & mode determination, run-state setup, DAG dispatch, retry (max 2), progress reporting, and a final run summary.
 
 This includes ad-hoc reconstruction of executable or logical content (SQL, pseudocode, boolean
-expressions, formulas) added directly to a doc outside the normal worker dispatch — "derived from
-already-passed upstream docs" is not a substitute for verifying the reconstruction against the
-literal source that produces the logic (a `Specification`/`Predicate`/condition-builder class, not
-just a business-language summary of it). Editorial-only fixes (wording, a confidence label, a
-cross-reference number) that are already fully specified by a completed quality-score or verify
-finding may still be applied directly — the distinction is whether you are correcting an existing
-finding verbatim or constructing new technical content.
+expressions, formulas, physical schema facts such as table/column names) added directly to a doc
+outside the normal worker dispatch — "derived from already-passed upstream docs" is not a
+substitute for verifying the reconstruction against the literal source that produces the logic (a
+`Specification`/`Predicate`/condition-builder class, not just a business-language summary of it)
+**and** against the layers between that source and actual runtime behavior — the project's
+naming-strategy config (an entity's `@Table` name is a JPA logical name, not necessarily the
+physical one) and the query framework's null-composition semantics (do not collapse two
+independently-skippable conditions into a single `BETWEEN`-style construct without checking).
+Editorial-only fixes (wording, a confidence label, a cross-reference number) that are already fully
+specified by a completed quality-score or verify finding may still be applied directly — the
+distinction is whether you are correcting an existing finding verbatim or constructing new
+technical content.
 
 Apply the full orchestration logic from the **analysis-orchestration** skill and follow the steps below exactly.
 

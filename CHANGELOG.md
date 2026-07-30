@@ -3,6 +3,30 @@
 All notable changes to this plugin are documented here.
 This project adheres to [Semantic Versioning](https://semver.org).
 
+## [0.10.3] - 2026-07-30
+
+### Fixed
+- **Literal-source verification (0.10.2) was necessary but not sufficient for reconstructed SQL** —
+  a project consuming this package correctly verified a reconstructed "equivalent SQL" section
+  against the literal `Specification`/`Predicate` source (per 0.10.2's rule), but the SQL still
+  failed in production: it used an entity's `@Table(name=...)` value directly as the table name in
+  runnable SQL, when the project's registered Hibernate `PhysicalNamingStrategy` transforms it
+  (adds a `T_GT_` prefix) before it reaches the database — `@Table(name=...)` is a JPA *logical*
+  name, not necessarily the physical one. The same reconstruction also collapsed two
+  independently-null-skippable `@Spec(GreaterThanEqual)`/`@Spec(LessThanEqual)` date fields into a
+  single `BETWEEN :begin AND :end`, misrepresenting the framework's actual null-composition
+  behavior (the specification-mapper framework drops a condition entirely when its bound is null;
+  `BETWEEN` with a `NULL` bound instead evaluates to `UNKNOWN`, i.e. zero rows).
+- Extended **analysis-conventions §3** with two further verification layers required before
+  treating reconstructed SQL as runnable: (1) physical naming/schema transformation — check the
+  project's naming-strategy class and its registration, not just the entity annotation; (2)
+  query-framework composition/null semantics — check how independently-configured predicate fields
+  actually compose before rewriting them as a single combined SQL construct.
+- Extended `quality-score`'s Pattern-sweep defect-classification list and `vspec-static`'s
+  direct-claims checklist with "physical-name mismatch" and "framework null-semantics collapsed"
+  examples, and `start-analysis`'s orchestrator-boundary statement to cover physical schema facts
+  alongside boolean-logic reconstruction.
+
 ## [0.10.2] - 2026-07-27
 
 ### Fixed

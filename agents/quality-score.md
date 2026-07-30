@@ -82,7 +82,14 @@ treat it as such before finalizing repair actions:
    condition writes `NOT EXISTS(x = y)` for source that is actually
    `EXISTS(x <> y)`, reading as equivalent from a business-language summary
    but not logically equivalent across all data shapes; verify against the
-   literal predicate-building code, not the summary).
+   literal predicate-building code, not the summary — "physical-name mismatch"
+   — reconstructed SQL uses an entity's JPA logical table/column name where
+   the project's naming-strategy config transforms it before it reaches the
+   database (verify against the naming-strategy class/config, not the
+   `@Table`/`@Column` annotation alone), "framework null-semantics collapsed"
+   — two independently-skippable predicate fields (e.g. separate GE/LE specs)
+   rewritten as a single `BETWEEN`-style construct, which behaves differently
+   when only one bound is supplied).
 2. Grep/search the **whole current document** (not just the sampled claims)
    for every other place the same fact type appears — other line-citation
    ranges for the same or sibling methods, other editability claims for

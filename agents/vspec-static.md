@@ -19,8 +19,14 @@ STATIC-DIFF entries.
   (including boolean-operator placement — EXISTS/NOT EXISTS, AND/OR,
   equals/not-equals; verify against the literal predicate structure, not a
   paraphrase), transaction settings, external calls, persisted fields, API
-  paths. Verify each claim directly against real code via the profile
-  module/layer map.
+  paths. For any reconstructed executable content (e.g. an "equivalent SQL"
+  section), also verify physical schema facts — actual table/column name
+  after the project's naming-strategy transformation, not just the entity's
+  `@Table`/`@Column` logical name — against the naming-strategy class/config,
+  and verify composed-condition null semantics (e.g. a `BETWEEN` written for
+  two independently-skippable spec fields) against the query framework's
+  actual null-handling, not plain-SQL intuition. Verify each claim directly
+  against real code via the profile module/layer map.
 - **Legacy three-layer mode (opt-in fallback)**: only when a mock skeleton
   exists at `<harness_dir>/<run_id>/mock/` (i.e. `vspec-mock` was explicitly
   dispatched). Compare **mock (A)** = what the SD says vs **real code (B)** vs
@@ -49,7 +55,9 @@ analysis docs or real source. No secrets.
 2. Per the selected mode, item by item (method signatures, I/O types,
    branching — including boolean-operator placement, verified against the
    literal predicate structure — transaction settings, external calls,
-   persisted fields), classify:
+   persisted fields, and — for reconstructed executable content — physical
+   schema facts and framework null-composition semantics per the mode
+   selection note above), classify:
    - ✅ correct — doc matches code.
    - ⚠️ omission — code has it, doc does not describe it.
    - ❌ wrong — doc contradicts code.

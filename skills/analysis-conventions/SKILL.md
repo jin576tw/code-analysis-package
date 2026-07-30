@@ -86,6 +86,32 @@ section manually added to a report's SA.md reconstructed a `POS_POLICY` exclusio
 source `Specification` class actually builds `EXISTS(SPECIAL_TYPE <> 'STUDENT')` — the two behave
 differently for policies with no matching row or with mixed special types across multiple rows.
 
+Verifying against the literal predicate-building source is **necessary but not sufficient** for
+reconstructed SQL to actually be runnable. Two further layers sit between an entity's source code
+and what the database will accept, and both must be checked — not assumed from the entity alone:
+
+- **Physical naming/schema transformation**: an entity's `@Table(name=...)` is the JPA *logical*
+  name. A project may register a custom `PhysicalNamingStrategy` (Hibernate) or equivalent that
+  transforms it before it reaches the database (prefix, suffix, case folding, schema remapping).
+  Check the project's naming-strategy class and its registration (datasource/JPA config, e.g.
+  `physical-strategy` in `application-*.yml`) — recorded in the profile card §5 once confirmed —
+  before writing the logical name into runnable SQL.
+- **Query-framework composition/null semantics**: when two independently-configured predicate
+  fields (e.g. two separate range-spec annotations, or two separate `Predicate`s) are reconstructed
+  as a single combined SQL construct (e.g. `BETWEEN` for a GE+LE pair), check how the framework
+  actually composes and null-handles them. If either side is independently skippable when its bound
+  is null, collapsing them into `BETWEEN` misrepresents the behavior — `BETWEEN a AND b` with either
+  bound `NULL` evaluates to `UNKNOWN` for that row, not "condition dropped."
+
+Observed in production (same feature as the EXISTS/NOT EXISTS example above): a reconstructed
+"equivalent SQL" section wrote `FROM ADP.INV_INSTALLMENT`/`ADP.POS_POLICY` directly from the
+entities' `@Table(name=...)` values, omitting the project's registered `PrefixedNaming` physical
+strategy that prefixes every non-`TAB_GE`/`TAB_GR` table with `T_GT_` — the SQL would fail with
+`ORA-00942` if run as written. The same section also wrote `ACCOUNTING_DATE BETWEEN :begin AND
+:end` for two fields that are independently-skippable `@Spec(GreaterThanEqual)`/`@Spec(LessThanEqual)`
+annotations with no `@NotNull` — a caller supplying only one bound gets a single one-sided
+condition in the real query, not the zero-row `BETWEEN` result the reconstruction implied.
+
 ## 4. Analysis focus
 
 - **Ignore comments, focus on data flow** — concentrate on actual logic and how
