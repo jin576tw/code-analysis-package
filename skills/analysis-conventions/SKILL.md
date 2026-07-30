@@ -95,7 +95,10 @@ and what the database will accept, and both must be checked — not assumed from
   transforms it before it reaches the database (prefix, suffix, case folding, schema remapping).
   Check the project's naming-strategy class and its registration (datasource/JPA config, e.g.
   `physical-strategy` in `application-*.yml`) — recorded in the profile card §5 once confirmed —
-  before writing the logical name into runnable SQL.
+  before writing the logical name into runnable SQL. **Do this for every table the reconstruction
+  references, not just the primary/anchor entity** — a `JOIN`, `EXISTS`/`IN` subquery, or correlated
+  subquery pulls in a different entity, and checking the anchor table's physical name does not
+  verify the others; each one needs its own pass against its own entity.
 - **Query-framework composition/null semantics**: when two independently-configured predicate
   fields (e.g. two separate range-spec annotations, or two separate `Predicate`s) are reconstructed
   as a single combined SQL construct (e.g. `BETWEEN` for a GE+LE pair), check how the framework

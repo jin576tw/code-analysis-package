@@ -3,6 +3,18 @@
 All notable changes to this plugin are documented here.
 This project adheres to [Semantic Versioning](https://semver.org).
 
+## [0.10.4] - 2026-07-30
+
+### Fixed
+- **Physical-naming check (0.10.3) was written in the singular, leaving joined/subqueried tables
+  unguarded** — the rule read "an entity's `@Table(name=...)` ...", which verifies the primary/
+  anchor table but does not force the same pass on any other table pulled in via `JOIN`,
+  `EXISTS`/`IN` subquery, or a correlated subquery from a different entity. The 0.10.3 worked
+  example happened to check both tables involved, but nothing in the rule text required it.
+  Clarified analysis-conventions' physical-naming bullet: the check must be repeated for every
+  table the reconstruction references, each against its own entity, not assumed transitively from
+  the anchor table's check.
+
 ## [0.10.3] - 2026-07-30
 
 ### Fixed
