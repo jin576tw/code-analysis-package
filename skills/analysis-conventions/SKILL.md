@@ -115,6 +115,23 @@ strategy that prefixes every non-`TAB_GE`/`TAB_GR` table with `T_GT_` — the SQ
 annotations with no `@NotNull` — a caller supplying only one bound gets a single one-sided
 condition in the real query, not the zero-row `BETWEEN` result the reconstruction implied.
 
+- **"No repo" is not "unverifiable"**: when the target calls another microservice through a
+  client-only dependency (a Feign/REST interface + DTOs published as a jar, no source checked out
+  locally), do not write off its interface/field contract as unconfirmable just because the
+  service's own repo isn't present. Locate the jar in the local dependency cache (e.g. Maven
+  `~/.m2/repository/...`) and decompile the interface and DTO classes (e.g. `javap -p`) to confirm
+  method signatures, field names, and types before documenting them — the same standard used for
+  local entities. What genuinely stays unconfirmable is business semantics with no code
+  representation at all (e.g. what a bare string status-code literal like `"2"` means), not the
+  shape of the contract itself. Don't conflate the two in the doc's confidence/provenance notes.
+
+Observed in production (same feature as above): a business-rules doc marked an external service's
+whole interface as "本 repo 無原始碼可確認" (unconfirmable, no source in this repo) when in fact the
+interface and its DTOs were fully inspectable — the caller's `pom.xml` depended on a published
+client-api jar for that service, and decompiling it confirmed every field the caller reads. Only
+the *business meaning* of one opaque string constant the caller sends (not the interface shape)
+was genuinely unconfirmable without the other service's own source.
+
 ## 4. Analysis focus
 
 - **Ignore comments, focus on data flow** — concentrate on actual logic and how

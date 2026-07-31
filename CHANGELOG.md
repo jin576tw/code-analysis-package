@@ -3,6 +3,20 @@
 All notable changes to this plugin are documented here.
 This project adheres to [Semantic Versioning](https://semver.org).
 
+## [0.10.5] - 2026-07-31
+
+### Fixed
+- **External microservice interfaces reachable only via a client jar were being marked
+  "unconfirmable" wholesale** — a project consuming this package described a Feign/REST
+  interface and its DTOs as unverifiable because the calling service's own repo held no source
+  for it, when in fact the interface/DTO shape was fully inspectable by decompiling the published
+  client-api jar dependency (`javap -p` against the local Maven cache), the same technique already
+  used elsewhere in this package to verify framework null-semantics. Added an
+  analysis-conventions rule: "no repo" for the *callee* is not "unverifiable" for its *contract* —
+  decompile the client jar before writing off interface/field facts as unconfirmable. What
+  genuinely stays unconfirmable is business semantics with no code representation at all (e.g. an
+  opaque string status-code literal), not the contract's shape.
+
 ## [0.10.4] - 2026-07-30
 
 ### Fixed
