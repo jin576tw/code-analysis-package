@@ -3,6 +3,9 @@
 Thumbs.db
 *.swp
 
+# Local Claude Code settings (per-machine, not project content)
+.claude/settings.local.json
+
 # Node (md-to-pdf / playwright may install here during use)
 node_modules/
 package-lock.json
