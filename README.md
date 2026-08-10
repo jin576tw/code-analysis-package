@@ -1,8 +1,8 @@
 # code-analysis-package
 
 A cross-project **reverse-engineering toolkit** for Claude Code, packaged as a
-plugin. It produces layered analysis documents and verifies them against the
-real code — for **any** codebase, not a single project.
+plugin. It supports an established layered Full profile and an output-contract-driven Fast
+profile, and verifies both against real code — for **any** codebase, not a single project.
 
 It was distilled from a battle-tested analysis/verification toolkit for a large
 enterprise codebase and **decoupled** so it works on any project through a
@@ -37,8 +37,11 @@ tool reads:
 ## Run analysis / verification
 
 ```
-# Full pipeline (orchestrator dispatches each worker in dependency order)
-/start-analysis analyse <FeatureOrEntryPoint>
+# Full nine-document pipeline
+/start-analysis <FeatureOrEntryPoint> --full
+
+# Fast SA-first pipeline: one integrated document, Maker + independent Reviewer
+/start-analysis <FeatureOrEntryPoint> --fast
 
 # A single layer on its own
 /dependency-analysis
@@ -52,7 +55,19 @@ tool reads:
 /md-to-pdf
 ```
 
-## What it produces
+## Profiles
+
+`--full` preserves the nine-document DAG listed below. `--fast` uses `fast_schema: 2` and creates
+one integrated target document plus evidence/review JSON. Fast works backward from the target
+document's required sections across six evidence groups, allows one Maker repair, and becomes
+delivery-ready only after a complete independent Reviewer PASS for current fingerprints with
+`diff_rate <= 0.10`. Older Fast artifacts are `fast-legacy` and cannot be delivery-ready.
+
+Both profiles classify UI verification as `static_pass`, `playwright_required`,
+`not_applicable`, or `blocked_runtime_evidence`. Playwright is reserved for JavaScript, AJAX,
+browser download, layout, and other runtime behavior. Mock is simulation only.
+
+## Full profile outputs
 
 Layered analysis docs per analysed feature (output path comes from the profile
 card §7; default `.analysis/docs/<MODULE>/<FEATURE>/<PAGE>/<FUNCTION>/`):
@@ -73,7 +88,7 @@ card §7; default `.analysis/docs/<MODULE>/<FEATURE>/<PAGE>/<FUNCTION>/`):
 
 ## Pipeline (DAG)
 
-`start-analysis` runs the full pipeline end-to-end, starting with a hard entry-
+`start-analysis --full` runs the full pipeline end-to-end, starting with a hard entry-
 confirmation gate (ticket screenshot or explicit user confirmation before the
 first stage). Each document-producing stage — including `ui-verify`,
 `api-contract`, and `sa` — is gated by `quality-score` before downstream stages
@@ -82,8 +97,8 @@ run, followed by an automatic verify phase after `sa`:
 ```
 [entry confirmation] → [scope card: SCOPE.md, user-confirmed] → deps
      → (vars ‖ erd ‖ funcs, ONE batched quality-score) → flow → rules
-     → [ui-verify: UI only] → sd → [api-contract: WS/API only] → sa
-     → vspec-e2e ‖ (vspec-mock, default skipped) → vspec-static (direct-claims by default)
+     → [ui-verify: risk-based] → sd → [api-contract: WS/API only] → sa
+     → [vspec-e2e: runtime-risk only] ‖ (vspec-mock, simulation only) → vspec-static
      → vspec-report → vspec-patch   ← auto verify
 ```
 

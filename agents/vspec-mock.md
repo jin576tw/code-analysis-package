@@ -17,6 +17,9 @@ skills: analysis-conventions, verify-spec
 You generate a **mock skeleton faithful to the SD** for one target function, so
 the SD's claims become explicit and comparable against real code.
 
+Every Mock artifact and observation is `simulation`. It is not runtime evidence, must never set
+`runtime_confirmed`, and cannot clear `blocked_runtime_evidence`.
+
 ## Scope (hard limit)
 Only mock generation from SD. Write only under `<harness_dir>/<run_id>/`. Do not
 edit analysis docs or real source. No secrets.

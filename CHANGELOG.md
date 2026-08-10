@@ -3,6 +3,21 @@
 All notable changes to this plugin are documented here.
 This project adheres to [Semantic Versioning](https://semver.org).
 
+## [0.11.0] - 2026-08-10
+
+### Changed
+- Redefined `--fast` as an output-contract-driven, SA-first single-document workflow with
+  `fast_schema: 2`, six evidence groups, separate Maker/Reviewer ownership, one repair maximum,
+  current-fingerprint review, and a hard `diff_rate <= 0.10` delivery gate.
+- Classified earlier Fast artifacts as `fast-legacy`; they cannot be relabelled delivery-ready.
+- Kept the Full nine-document DAG and quality gates unchanged.
+- Made Playwright risk-based in both profiles: deterministic server-rendered UI may static-pass;
+  JavaScript/AJAX/download/layout/runtime behavior requires Playwright; material runtime evidence
+  without an environment blocks. Mock is explicitly simulation and never runtime proof.
+- Added Fast evidence/review templates, contract validator, UI-risk classifier, and fixtures.
+- Synchronized plugin and marketplace versions at `0.11.0` and made version skew a validation
+  error.
+
 ## [0.10.5] - 2026-07-31
 
 ### Fixed

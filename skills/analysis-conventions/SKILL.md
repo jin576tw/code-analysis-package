@@ -304,42 +304,25 @@ Confidence mapping (per §8):
 
 ---
 
-## 12. Fast-profile document banner
+## 12. Fast schema 2 provenance
 
-When the orchestrator dispatches you with `analysis_profile=fast`, you **must** write a
-provenance banner into every document you produce. The banner is what tells a future reader —
-and a future full-profile run — that this document has not been through the per-stage precision
-loop. It is written by **you** (the worker), not by the orchestrator: the orchestrator is
-forbidden from editing files under `<docs_root>` directly.
-
-**Placement**: immediately after the `> **Entry Point**:` line, before any other content.
-
-**Verbatim template** (fill every `<...>` from the values passed in your dispatch prompt; leave a
-placeholder only if the value genuinely is not yet known at write time):
+Fast is an output-contract-driven, single-document profile. It does not produce a cheaper copy of
+the Full nine-document DAG. Put this banner immediately after the integrated document's entry
+point line:
 
 ```markdown
-> 🚀 **FAST-MODE 產出（架構認知用草稿，非交付級分析）**
-> `analysis_profile: fast` | run_id: <run_id> | generated: <YYYY-MM-DD>
-> 本文件通過「結構正確性」gate（四項矛盾型 structural_flags 全 false、Completeness ≥ 3.0），
-> **未經** per-stage `score_10 >= 9.0` 精確度迴圈。行號 / 欄位級引用僅由結尾一次
-> spec-vs-code verify 批次校正，可能仍有偏移。
-> 產出範圍與完整模式相同（含 ui-verify 與 Layer 5 verify），差異僅在未做逐階段精度修補。
-> ⛔ 不得作為交付依據。補全指令：`/start-analysis <功能> --full`
+> `analysis_profile: fast` | `fast_schema: 2` | `artifact_class: fast-v2`
+> Output-contract-driven integrated analysis. Delivery readiness requires an independent Reviewer
+> PASS for the current document/evidence fingerprints and `diff_rate <= 0.10`.
 ```
 
-**Rules**:
+Rules:
 
-1. `analysis_profile: fast` must appear **verbatim** — it is the machine-readable marker that
-   `start-analysis` greps for when deciding whether a later full run may reuse this document.
-2. Do **not** write the banner when dispatched with `analysis_profile=full` (or with no profile
-   given — absence means `full`).
-3. When a full-profile run upgrades a fast document and it clears the 9.0 gate, the banner is
-   **rewritten** to `analysis_profile: full` rather than deleted, so the upgrade remains visible
-   in the document's own history.
-4. **§13-equivalent confidence tightening**: in a fast-profile document, any bug candidate or
-   static inference must be labelled at confidence **低（靜態推論，待 stack trace）** at most.
-   Fast output is less verified than full output, so the labelling obligation is stricter, not
-   looser. Never write `已確認` / `confirmed` / `HIGH confidence` in a fast document.
-5. The banner states the profile, not a quality verdict — do not editorialise it, soften it, or
-   omit the ⛔ line. A reader who skips the banner is exactly the failure mode it exists to
-   prevent.
+1. Write only one integrated target document plus the run-local evidence artifact.
+2. Leave `delivery_ready=false`; only the contract validator may derive readiness after review.
+3. Treat earlier Fast output without schema 2 as `fast-legacy`. Never relabel it as current.
+4. Cite all source-derived facts. Keep unapproved target design labelled proposed.
+5. Label Mock HTML, Mock services, generated test data, and Mock screenshots as `simulation`.
+   Simulation never proves live runtime behavior.
+6. Use the UI risk decision contract. Static evidence may close deterministic server-rendered UI;
+   browser-only behavior requires Playwright or blocks when material and unavailable.

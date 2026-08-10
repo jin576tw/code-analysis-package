@@ -9,8 +9,8 @@
     {
       "name": "code-analysis-package",
       "source": "./",
-      "description": "Layered code analysis + spec verification toolkit, decoupled from any single project via a per-project profile card.",
-      "version": "0.10.2"
+      "description": "Full layered code analysis plus fast_schema 2 SA-first Maker/Reviewer analysis, decoupled through a project profile card.",
+      "version": "0.11.0"
     }
   ]
 }

@@ -1,9 +1,17 @@
 {
-  "_schema_version": "1.5",
+  "_schema_version": "1.6",
+  "fast_schema": null,
+  "artifact_class": null,
+  "delivery_ready": false,
+  "ui_risk_decision": null,
+  "maker_attempts": 0,
+  "reviewer_fingerprint": null,
+  "reviewer_verdict": null,
   "_enums": {
-    "quality_gate": "null (initial) | skipped | passed | repairing | failed_local | failed_structural | fast_pass | tech_debt_accepted | accepted_risk",
+    "quality_gate": "null (initial) | skipped | passed | repairing | failed_local | failed_structural | tech_debt_accepted | accepted_risk",
     "analysis_profile": "full | fast",
-    "note": "fast_pass = fast profile structural gate cleared (score_10 may be < 9.0). tech_debt_accepted = full profile, repair cap exhausted, still <9.0 but all structural flags false — auto-continue, recorded in _pending/human-review-queue.md, no per-run question. accepted_risk = human explicitly accepted a sub-threshold result (typically via the §5c circuit breaker); resume_decision is mandatory. None of the three is equivalent to passed."
+    "ui_risk_decision": "static_pass | playwright_required | not_applicable | blocked_runtime_evidence",
+    "note": "Fast uses fast_schema 2 and Maker/Reviewer stages, not the Full stage list. Full retains the nine-document DAG. Mock is simulation only."
   },
   "run_id": "<timestamp>-<feature>",
   "feature": "<feature>",
@@ -11,6 +19,11 @@
   "entry_type": "ui | ws-api | rest-api | batch | cli",
   "mode": "A | B | C",
   "analysis_profile": "full | fast",
+  "fast_stages": [
+    { "name": "fast-maker", "status": "pending", "attempt": 0, "max_attempts": 2, "artifact": null, "evidence": null },
+    { "name": "fast-reviewer", "status": "pending", "attempt": 0, "max_attempts": 2, "review": null, "maker_artifact_sha256": null, "evidence_sha256": null },
+    { "name": "fast-contract", "status": "pending", "delivery_ready": false, "error": null }
+  ],
   "doc_root": "<docs_root>/<MODULE>/<FEATURE>/<PAGE>/<FUNCTION>",
   "scope_card_path": null,
   "started_at": "<ISO-8601 +TZ>",

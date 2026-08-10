@@ -1,0 +1,4 @@
+interface:
+  display_name: "Fast Analysis"
+  short_description: "Build one reviewed SA-first analysis document"
+  default_prompt: "Use $fast-analysis to create one reviewed SA-first analysis document from target output coverage."

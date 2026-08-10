@@ -57,8 +57,12 @@ if (-not (Test-Path $pluginJson)) {
 # 2. marketplace.json
 $marketJson = Join-Path $Root '.claude-plugin/marketplace.json'
 if (Test-Path $marketJson) {
-  try { Get-Content -Raw $marketJson | ConvertFrom-Json | Out-Null
-        Write-Host "[ok] marketplace.json is valid JSON" -ForegroundColor Green }
+  try { $marketplace = Get-Content -Raw $marketJson | ConvertFrom-Json
+        Write-Host "[ok] marketplace.json is valid JSON" -ForegroundColor Green
+        $marketVersion = [string]@($marketplace.plugins)[0].version
+        if ($manifest -and [string]$manifest.version -ne $marketVersion) {
+          $problems.Add("Version mismatch: plugin.json=$($manifest.version), marketplace.json=$marketVersion")
+        } else { Write-Host "[ok] manifest versions synchronized: $marketVersion" -ForegroundColor Green } }
   catch { $problems.Add("marketplace.json is not valid JSON: $_") }
 }
 
@@ -171,6 +175,44 @@ foreach ($hit in $badLegacy) {
   $problems.Add("Non-fallback SD-review reference in $($hit.Path):$($hit.LineNumber) -> $($hit.Line.Trim())")
 }
 Write-Host "[ok] verify-report naming / quality schema check done" -ForegroundColor Green
+
+# 10. fast_schema 2 contract surface
+$fastRequired = @(
+  'skills/fast-analysis/SKILL.md',
+  'skills/fast-analysis/references/output-contract.md',
+  'agents/fast-analysis-maker.md',
+  'agents/fast-analysis-reviewer.md',
+  'templates/fast-evidence.template.json',
+  'templates/fast-review.template.json',
+  'scripts/Get-UiRiskDecision.ps1',
+  'scripts/Test-FastAnalysisContract.ps1',
+  'scripts/Test-FastContractFixtures.ps1'
+)
+foreach ($relative in $fastRequired) {
+  if (-not (Test-Path -LiteralPath (Join-Path $Root $relative) -PathType Leaf)) {
+    $problems.Add("Missing Fast contract file: $relative")
+  }
+}
+foreach ($jsonRelative in @('templates/fast-evidence.template.json','templates/fast-review.template.json')) {
+  $jsonPath = Join-Path $Root $jsonRelative
+  if (Test-Path -LiteralPath $jsonPath) {
+    try {
+      $fastJson = Get-Content -LiteralPath $jsonPath -Raw -Encoding UTF8 | ConvertFrom-Json
+      if ($fastJson.fast_schema -ne 2) { $problems.Add("$jsonRelative must declare fast_schema 2") }
+    } catch { $problems.Add("$jsonRelative is invalid JSON: $_") }
+  }
+}
+$startCommand = Join-Path $Root 'commands/start-analysis.md'
+if (Test-Path -LiteralPath $startCommand) {
+  $startText = Get-Content -LiteralPath $startCommand -Raw -Encoding UTF8
+  foreach ($marker in @('fast_schema=2','fast-analysis-maker','fast-analysis-reviewer','diff_rate <= 0.10','fast-legacy')) {
+    if (-not $startText.Contains($marker)) { $problems.Add("start-analysis missing Fast contract marker: $marker") }
+  }
+  if ($startText -match 'Both profiles produce the \*\*same document set') {
+    $problems.Add('start-analysis still claims Fast and Full produce the same document set')
+  }
+}
+Write-Host "[ok] fast_schema 2 contract check done" -ForegroundColor Green
 
 # Report
 Write-Host ""
