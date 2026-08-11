@@ -1,29 +1,41 @@
 {
-  "fast_schema": 2,
+  "fast_schema": 3,
   "analysis_profile": "fast",
-  "artifact_class": "fast-v2",
+  "artifact_class": "fast-v3",
   "run_id": "<run-id>",
-  "staged_document_path": "<relative-path-to-integrated-document>",
+  "contract_id": "<project-owned-contract-id>",
+  "output_contract_sha256": "<sha256>",
+  "target_document_path": "<run-relative-path-from-output-contract>",
   "delivery_ready": false,
-  "output_contract": {
-    "required_sections": [],
-    "document_role": "integrated-target-analysis"
-  },
   "coverage": {
     "covered_sections": []
   },
+  "collector_runs": [
+    {
+      "collector": "dependencies",
+      "status": "pending | complete | not_applicable",
+      "materialized_document": false,
+      "supports": []
+    }
+  ],
+  "evidence_requirements": [
+    {
+      "id": "<contract-requirement-id>",
+      "status": "pending | covered | not_applicable",
+      "not_applicable_reason": null,
+      "items": [
+        {
+          "source": "<relative-source-path>",
+          "locator": "<stable-locator>",
+          "fact_type": "observed | approved | proposed"
+        }
+      ]
+    }
+  ],
   "ui_risk": {
     "decision": "static_pass | playwright_required | not_applicable | blocked_runtime_evidence",
     "signals": [],
     "evidence_kind": "static | live | simulation | none",
     "runtime_confirmed": false
-  },
-  "evidence_groups": {
-    "scope_uc": { "status": "pending", "items": [] },
-    "flow_rules": { "status": "pending", "items": [] },
-    "screen_fields": { "status": "pending", "items": [] },
-    "api_contracts": { "status": "pending", "items": [] },
-    "interactions": { "status": "pending", "items": [] },
-    "data_model_and_supplementary": { "status": "pending", "items": [] }
   }
 }

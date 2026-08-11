@@ -13,67 +13,121 @@ $utf8 = New-Object System.Text.UTF8Encoding($false)
 $validator = Join-Path $Root 'scripts\Test-FastAnalysisContract.ps1'
 $classifier = Join-Path $Root 'scripts\Get-UiRiskDecision.ps1'
 
-function Write-Json([string]$Path, $Value) {
-    [System.IO.File]::WriteAllText($Path, ($Value | ConvertTo-Json -Depth 12), $utf8)
-}
-function Invoke-Contract([string]$Evidence, [string]$Review, [string]$Plugin, [string]$Market) {
-    $output = & powershell.exe -NoProfile -ExecutionPolicy Bypass -File $validator -EvidencePath $Evidence -ReviewPath $Review -PluginManifestPath $Plugin -MarketplacePath $Market 2>&1
+function Write-Json([string]$Path, $Value) { [System.IO.File]::WriteAllText($Path, ($Value | ConvertTo-Json -Depth 15), $utf8) }
+function Copy-Object($Value) { return ($Value | ConvertTo-Json -Depth 15 | ConvertFrom-Json) }
+function Invoke-Contract([string]$Evidence, [string]$Review, [string]$Contract, [string]$Plugin, [string]$Market) {
+    $output = & powershell.exe -NoProfile -ExecutionPolicy Bypass -File $validator -EvidencePath $Evidence -ReviewPath $Review -OutputContractPath $Contract -PluginManifestPath $Plugin -MarketplacePath $Market 2>&1
     [pscustomobject]@{ ExitCode = $LASTEXITCODE; Output = ($output -join "`n") }
-}
-function Copy-Object($Value) {
-    return ($Value | ConvertTo-Json -Depth 12 | ConvertFrom-Json)
 }
 
 try {
-    $makerPath = Join-Path $resolvedRoot 'FAST-SA.md'
-    [System.IO.File]::WriteAllText($makerPath, '# Integrated target document', $utf8)
-    $evidencePath = Join-Path $resolvedRoot 'evidence.json'
-    $reviewPath = Join-Path $resolvedRoot 'review.json'
+    $targetPath = Join-Path $resolvedRoot 'ANALYSIS.md'
+    [System.IO.File]::WriteAllText($targetPath, '# Scope`r`n# Behavior', $utf8)
+    $contractPath = Join-Path $resolvedRoot 'output-contract.json'
+    $evidencePath = Join-Path $resolvedRoot 'fast-evidence.json'
+    $reviewPath = Join-Path $resolvedRoot 'fast-review.json'
     $pluginPath = Join-Path $resolvedRoot 'plugin.json'
     $marketPath = Join-Path $resolvedRoot 'marketplace.json'
-    Write-Json $pluginPath ([ordered]@{ version = '0.11.0' })
-    Write-Json $marketPath ([ordered]@{ plugins = @([ordered]@{ version = '0.11.0' }) })
+    Write-Json $pluginPath ([ordered]@{ version = '0.12.0' })
+    Write-Json $marketPath ([ordered]@{ plugins = @([ordered]@{ version = '0.12.0' }) })
 
-    $groups = [ordered]@{}
-    foreach ($group in @('scope_uc','flow_rules','screen_fields','api_contracts','interactions','data_model_and_supplementary')) {
-        $groups[$group] = [ordered]@{ status = 'covered'; items = @([ordered]@{ source = 'src/example'; locator = 'L1' }) }
+    $contract = [ordered]@{
+        contract_schema = 1; contract_id = 'fixture:summary:v1'
+        target_document = [ordered]@{ path = 'ANALYSIS.md'; role = 'fixture-summary'; required_sections = @('scope','behavior') }
+        evidence_requirements = @(
+            [ordered]@{ id = 'scope'; description = 'scope'; required = $true; allowed_not_applicable = $false; collectors = @('dependencies'); target_sections = @('scope') },
+            [ordered]@{ id = 'behavior'; description = 'behavior'; required = $true; allowed_not_applicable = $false; collectors = @('functions','execution_flow'); target_sections = @('behavior') }
+        )
     }
+    Write-Json $contractPath $contract
+    $contractHash = (Get-FileHash $contractPath -Algorithm SHA256).Hash.ToLowerInvariant()
     $baseEvidence = [ordered]@{
-        fast_schema = 2; analysis_profile = 'fast'; artifact_class = 'fast-v2'; run_id = 'fixture'
-        staged_document_path = 'FAST-SA.md'; delivery_ready = $false
-        output_contract = [ordered]@{ required_sections = @('scope','flow','ui','api','sequence','data'); document_role = 'integrated-target-analysis' }
-        coverage = [ordered]@{ covered_sections = @('scope','flow','ui','api','sequence','data') }
+        fast_schema = 3; analysis_profile = 'fast'; artifact_class = 'fast-v3'; run_id = 'fixture'
+        contract_id = 'fixture:summary:v1'; output_contract_sha256 = $contractHash
+        target_document_path = 'ANALYSIS.md'; delivery_ready = $false
+        coverage = [ordered]@{ covered_sections = @('scope','behavior') }
+        collector_runs = @(
+            [ordered]@{ collector = 'dependencies'; status = 'complete'; materialized_document = $false; supports = @('scope') },
+            [ordered]@{ collector = 'functions'; status = 'complete'; materialized_document = $false; supports = @('behavior') },
+            [ordered]@{ collector = 'execution_flow'; status = 'complete'; materialized_document = $false; supports = @('behavior') }
+        )
+        evidence_requirements = @(
+            [ordered]@{ id = 'scope'; status = 'covered'; not_applicable_reason = $null; items = @([ordered]@{ source = 'src/entry'; locator = 'L1'; fact_type = 'observed' }) },
+            [ordered]@{ id = 'behavior'; status = 'covered'; not_applicable_reason = $null; items = @([ordered]@{ source = 'src/service'; locator = 'L10'; fact_type = 'observed' }) }
+        )
         ui_risk = [ordered]@{ decision = 'static_pass'; signals = @(); evidence_kind = 'static'; runtime_confirmed = $false }
-        evidence_groups = $groups
     }
     Write-Json $evidencePath $baseEvidence
     $baseReview = [ordered]@{
-        fast_schema = 2; classification = 'fast-v2'; verdict = 'PASS'
-        maker_artifact_sha256 = (Get-FileHash -LiteralPath $makerPath -Algorithm SHA256).Hash.ToLowerInvariant()
-        evidence_sha256 = (Get-FileHash -LiteralPath $evidencePath -Algorithm SHA256).Hash.ToLowerInvariant()
-        reviewed_at = [DateTime]::UtcNow.ToString('o'); review_round = 1; diff_rate = 0.05
-        coverage_complete = $true; ui_risk_accepted = $true; findings = @(); delivery_ready = $true
+        fast_schema = 3; classification = 'fast-v3'; verdict = 'PASS'
+        target_document_sha256 = (Get-FileHash $targetPath -Algorithm SHA256).Hash.ToLowerInvariant()
+        evidence_sha256 = (Get-FileHash $evidencePath -Algorithm SHA256).Hash.ToLowerInvariant()
+        output_contract_sha256 = $contractHash; reviewed_at = [DateTime]::UtcNow.ToString('o')
+        review_round = 1; diff_rate = 0.05; coverage_complete = $true; collectors_verified = $true
+        ui_risk_accepted = $true; findings = @(); delivery_ready = $true
     }
     Write-Json $reviewPath $baseReview
-    $valid = Invoke-Contract $evidencePath $reviewPath $pluginPath $marketPath
-    if ($valid.ExitCode -ne 0) { throw "Valid contract rejected: $($valid.Output)" }
+    $valid = Invoke-Contract $evidencePath $reviewPath $contractPath $pluginPath $marketPath
+    if ($valid.ExitCode -ne 0) { throw "Valid project contract rejected: $($valid.Output)" }
 
-    $missing = Copy-Object $baseEvidence; $missing.coverage = [ordered]@{ covered_sections = @('scope','flow') }
-    Write-Json $evidencePath $missing; $baseReview.evidence_sha256 = (Get-FileHash $evidencePath -Algorithm SHA256).Hash.ToLowerInvariant(); Write-Json $reviewPath $baseReview
-    if ((Invoke-Contract $evidencePath $reviewPath $pluginPath $marketPath).ExitCode -eq 0) { throw 'Missing SA coverage was accepted' }
+    $missingSection = Copy-Object $baseEvidence
+    $missingSection.coverage.covered_sections = @('scope')
+    Write-Json $evidencePath $missingSection
+    $review = Copy-Object $baseReview; $review.evidence_sha256 = (Get-FileHash $evidencePath -Algorithm SHA256).Hash.ToLowerInvariant(); Write-Json $reviewPath $review
+    if ((Invoke-Contract $evidencePath $reviewPath $contractPath $pluginPath $marketPath).ExitCode -eq 0) { throw 'Missing required target section was accepted' }
 
-    Write-Json $evidencePath $baseEvidence; $baseReview.evidence_sha256 = (Get-FileHash $evidencePath -Algorithm SHA256).Hash.ToLowerInvariant(); $baseReview.diff_rate = 0.11; Write-Json $reviewPath $baseReview
-    if ((Invoke-Contract $evidencePath $reviewPath $pluginPath $marketPath).ExitCode -eq 0) { throw 'diff_rate > 0.10 was accepted' }
+    $missingEvidence = Copy-Object $baseEvidence
+    $missingEvidence.evidence_requirements = @($missingEvidence.evidence_requirements | Where-Object { $_.id -ne 'behavior' })
+    Write-Json $evidencePath $missingEvidence
+    $review.evidence_sha256 = (Get-FileHash $evidencePath -Algorithm SHA256).Hash.ToLowerInvariant(); Write-Json $reviewPath $review
+    if ((Invoke-Contract $evidencePath $reviewPath $contractPath $pluginPath $marketPath).ExitCode -eq 0) { throw 'Missing project evidence requirement was accepted' }
 
-    $baseReview.diff_rate = 0.05; $baseReview.maker_artifact_sha256 = ('0' * 64); Write-Json $reviewPath $baseReview
-    if ((Invoke-Contract $evidencePath $reviewPath $pluginPath $marketPath).ExitCode -eq 0) { throw 'Stale reviewer fingerprint was accepted' }
+    Write-Json $evidencePath $baseEvidence
+    $review = Copy-Object $baseReview; $review.evidence_sha256 = (Get-FileHash $evidencePath -Algorithm SHA256).Hash.ToLowerInvariant(); $review.diff_rate = 0.11; Write-Json $reviewPath $review
+    if ((Invoke-Contract $evidencePath $reviewPath $contractPath $pluginPath $marketPath).ExitCode -eq 0) { throw 'diff_rate > 0.10 was accepted' }
 
-    $legacy = Copy-Object $baseEvidence; $legacy.fast_schema = 1; Write-Json $evidencePath $legacy
-    $baseReview.fast_schema = 1; $baseReview.maker_artifact_sha256 = (Get-FileHash $makerPath -Algorithm SHA256).Hash.ToLowerInvariant(); $baseReview.evidence_sha256 = (Get-FileHash $evidencePath -Algorithm SHA256).Hash.ToLowerInvariant(); Write-Json $reviewPath $baseReview
-    if ((Invoke-Contract $evidencePath $reviewPath $pluginPath $marketPath).ExitCode -eq 0) { throw 'Legacy fast schema was delivery-ready' }
+    $review = Copy-Object $baseReview; $review.target_document_sha256 = ('0' * 64); Write-Json $reviewPath $review
+    if ((Invoke-Contract $evidencePath $reviewPath $contractPath $pluginPath $marketPath).ExitCode -eq 0) { throw 'Stale reviewer fingerprint was accepted' }
 
-    Write-Json $marketPath ([ordered]@{ plugins = @([ordered]@{ version = '0.10.9' }) })
-    if ((Invoke-Contract $evidencePath $reviewPath $pluginPath $marketPath).ExitCode -eq 0) { throw 'Version mismatch was accepted' }
+    $legacy = Copy-Object $baseEvidence; $legacy.fast_schema = 2; $legacy.artifact_class = 'fast-v2'; Write-Json $evidencePath $legacy
+    $review = Copy-Object $baseReview; $review.fast_schema = 2; $review.classification = 'fast-v2'; $review.evidence_sha256 = (Get-FileHash $evidencePath -Algorithm SHA256).Hash.ToLowerInvariant(); Write-Json $reviewPath $review
+    if ((Invoke-Contract $evidencePath $reviewPath $contractPath $pluginPath $marketPath).ExitCode -eq 0) { throw 'fast_schema 2 was delivery-ready' }
+
+    Write-Json $evidencePath $baseEvidence
+    Write-Json $reviewPath $baseReview
+    Write-Json $marketPath ([ordered]@{ plugins = @([ordered]@{ version = '0.11.0' }) })
+    if ((Invoke-Contract $evidencePath $reviewPath $contractPath $pluginPath $marketPath).ExitCode -eq 0) { throw 'Version mismatch was accepted' }
+    Write-Json $marketPath ([ordered]@{ plugins = @([ordered]@{ version = '0.12.0' }) })
+
+    $alternateTarget = Join-Path $resolvedRoot 'INVENTORY.md'
+    [System.IO.File]::WriteAllText($alternateTarget, '# Inventory', $utf8)
+    $alternateContract = [ordered]@{
+        contract_schema = 1; contract_id = 'fixture:inventory:v1'
+        target_document = [ordered]@{ path = 'INVENTORY.md'; role = 'inventory'; required_sections = @('inventory') }
+        evidence_requirements = @([ordered]@{ id = 'entities'; description = 'entities'; required = $true; allowed_not_applicable = $false; collectors = @('data_model'); target_sections = @('inventory') })
+    }
+    Write-Json $contractPath $alternateContract
+    $alternateContractHash = (Get-FileHash $contractPath -Algorithm SHA256).Hash.ToLowerInvariant()
+    $alternateEvidence = [ordered]@{
+        fast_schema = 3; analysis_profile = 'fast'; artifact_class = 'fast-v3'; run_id = 'alternate'
+        contract_id = 'fixture:inventory:v1'; output_contract_sha256 = $alternateContractHash
+        target_document_path = 'INVENTORY.md'; delivery_ready = $false
+        coverage = [ordered]@{ covered_sections = @('inventory') }
+        collector_runs = @([ordered]@{ collector = 'data_model'; status = 'complete'; materialized_document = $false; supports = @('entities') })
+        evidence_requirements = @([ordered]@{ id = 'entities'; status = 'covered'; items = @([ordered]@{ source = 'src/entity'; locator = 'L1'; fact_type = 'observed' }) })
+        ui_risk = [ordered]@{ decision = 'not_applicable'; signals = @(); evidence_kind = 'none'; runtime_confirmed = $false }
+    }
+    Write-Json $evidencePath $alternateEvidence
+    $alternateReview = [ordered]@{
+        fast_schema = 3; classification = 'fast-v3'; verdict = 'PASS'
+        target_document_sha256 = (Get-FileHash $alternateTarget -Algorithm SHA256).Hash.ToLowerInvariant()
+        evidence_sha256 = (Get-FileHash $evidencePath -Algorithm SHA256).Hash.ToLowerInvariant()
+        output_contract_sha256 = $alternateContractHash; reviewed_at = [DateTime]::UtcNow.ToString('o')
+        review_round = 1; diff_rate = 0.02; coverage_complete = $true; collectors_verified = $true
+        ui_risk_accepted = $true; findings = @(); delivery_ready = $true
+    }
+    Write-Json $reviewPath $alternateReview
+    if ((Invoke-Contract $evidencePath $reviewPath $contractPath $pluginPath $marketPath).ExitCode -ne 0) { throw 'Alternate project output contract was rejected' }
 
     $server = & powershell.exe -NoProfile -ExecutionPolicy Bypass -File $classifier -EntryType ui -SourceText '<form method="post">server rendered</form>' -EvidenceKind static | ConvertFrom-Json
     if ($server.decision -ne 'static_pass') { throw 'Server-rendered UI did not static-pass' }
@@ -87,9 +141,10 @@ try {
     if ($mock.runtime_confirmed -or -not $mock.simulation_only) { throw 'Mock was treated as runtime-confirmed' }
 
     [ordered]@{
-        valid_evidence_and_pass = 'pass'; missing_coverage = 'rejected'; diff_rate_gt_010 = 'rejected'
-        stale_fingerprint = 'rejected'; legacy_schema = 'not-delivery-ready'; version_mismatch = 'rejected'
-        ui_server_static = 'static_pass'; ui_risks = 'playwright_required'; runtime_missing = 'blocked'; mock = 'simulation-only'
+        project_contract_pass = 'pass'; alternate_contract_pass = 'pass'; missing_section = 'rejected'
+        missing_evidence = 'rejected'; diff_rate_gt_010 = 'rejected'; stale_fingerprint = 'rejected'
+        schema_2 = 'legacy-not-delivery-ready'; version_mismatch = 'rejected'; ui_server_static = 'static_pass'
+        ui_risks = 'playwright_required'; runtime_missing = 'blocked'; mock = 'simulation-only'
     } | ConvertTo-Json
 } finally {
     if (Test-Path -LiteralPath $resolvedRoot) { Remove-Item -LiteralPath $resolvedRoot -Recurse -Force }

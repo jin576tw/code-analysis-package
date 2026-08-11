@@ -18,11 +18,11 @@ You **do not verify yourself** — sub-agents do. You handle: input resolution, 
 
 Get `FUNCTION_NAME` (required) and optional `doc_root` (else search `<docs_root>` for the function dir from the profile card). Confirm SD.md is readable; if not, stop: "❌ Cannot find SD.md for <FUNCTION_NAME>." Determine module + entry_point + entry_type from SD.md / DEPENDENCIES.md.
 
-**Fast artifact check**: current Fast schema 2 output is one integrated document and is validated
-through `Test-FastAnalysisContract.ps1`, not this SD-only command. If an SD carries
-`analysis_profile: fast` without `fast_schema: 2`, classify it `fast-legacy`, warn that it cannot be
-delivery-ready, and recommend `/start-analysis <feature> --fast` to regenerate the current
-Maker/Reviewer contract. Do not present this command as an upgrade path.
+**Fast artifact check**: current Fast schema 3 output is a project-contract target document and is
+validated through `Test-FastAnalysisContract.ps1`, not this SD-only command. Classify schema 2 as
+`fast-v2-legacy` and earlier/missing schemas as `fast-legacy`; warn that neither can be
+delivery-ready, and recommend `/start-analysis <feature> --fast --output-contract <path>` to
+regenerate the current Maker/Reviewer artifacts. Do not present this command as an upgrade path.
 
 ### Step 1 — Harness init
 

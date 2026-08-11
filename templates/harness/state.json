@@ -1,7 +1,9 @@
 {
-  "_schema_version": "1.6",
+  "_schema_version": "1.7",
   "fast_schema": null,
   "artifact_class": null,
+  "output_contract_path": null,
+  "output_contract_sha256": null,
   "delivery_ready": false,
   "ui_risk_decision": null,
   "maker_attempts": 0,
@@ -11,7 +13,7 @@
     "quality_gate": "null (initial) | skipped | passed | repairing | failed_local | failed_structural | tech_debt_accepted | accepted_risk",
     "analysis_profile": "full | fast",
     "ui_risk_decision": "static_pass | playwright_required | not_applicable | blocked_runtime_evidence",
-    "note": "Fast uses fast_schema 2 and Maker/Reviewer stages, not the Full stage list. Full retains the nine-document DAG. Mock is simulation only."
+    "note": "Fast uses fast_schema 3, a project output contract, core collectors, and Maker/Reviewer stages. Full retains the nine-document DAG. Mock is simulation only."
   },
   "run_id": "<timestamp>-<feature>",
   "feature": "<feature>",

@@ -1,4 +1,4 @@
 interface:
   display_name: "Fast Analysis"
-  short_description: "Build one reviewed SA-first analysis document"
-  default_prompt: "Use $fast-analysis to create one reviewed SA-first analysis document from target output coverage."
+  short_description: "Build one reviewed project-contract analysis"
+  default_prompt: "Use $fast-analysis with a project output contract to build one evidence-backed reviewed analysis document."

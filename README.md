@@ -40,8 +40,8 @@ tool reads:
 # Full nine-document pipeline
 /start-analysis <FeatureOrEntryPoint> --full
 
-# Fast SA-first pipeline: one integrated document, Maker + independent Reviewer
-/start-analysis <FeatureOrEntryPoint> --fast
+# Fast project-contract pipeline: core collectors, one target document, independent Reviewer
+/start-analysis <FeatureOrEntryPoint> --fast --output-contract <path>
 
 # A single layer on its own
 /dependency-analysis
@@ -57,15 +57,33 @@ tool reads:
 
 ## Profiles
 
-`--full` preserves the nine-document DAG listed below. `--fast` uses `fast_schema: 2` and creates
-one integrated target document plus evidence/review JSON. Fast works backward from the target
-document's required sections across six evidence groups, allows one Maker repair, and becomes
-delivery-ready only after a complete independent Reviewer PASS for current fingerprints with
-`diff_rate <= 0.10`. Older Fast artifacts are `fast-legacy` and cannot be delivery-ready.
+`--full` preserves the nine-document DAG listed below. `--fast` uses `fast_schema: 3` and requires a
+project-owned output contract that defines the target document, required sections, and evidence
+requirements. Fast reuses the package's core collectors without materializing their separate Full
+documents, allows one Maker repair, and becomes delivery-ready only after a complete independent
+Reviewer PASS for current document/evidence/contract fingerprints with `diff_rate <= 0.10`.
+Schema 2 artifacts are `fast-v2-legacy`; earlier artifacts are `fast-legacy`.
+
+Copy `templates/fast-output-contract.template.json` into the consuming project and adapt its
+sections and evidence requirements. Domain outputs such as an SA, audit memo, API brief, or data
+inventory belong in that project contract, not in the package's generic Fast schema.
 
 Both profiles classify UI verification as `static_pass`, `playwright_required`,
 `not_applicable`, or `blocked_runtime_evidence`. Playwright is reserved for JavaScript, AJAX,
 browser download, layout, and other runtime behavior. Mock is simulation only.
+
+### Using Fast and Full together
+
+Use Fast first when the entry and target contract are clear and the change is bounded. Start a new
+Full run when Fast finds expanding scope, unresolved cross-layer contradictions, material runtime
+evidence without an environment, `diff_rate > 0.10`, or a second Reviewer failure. Do not promote
+or relabel the Fast artifacts into Full artifacts.
+
+Use Full first for unfamiliar domains, cross-system/transaction work, broad data-model impact, or
+when a durable AS-IS baseline is required. Later bounded changes may use Fast and cite that baseline
+as context, but must re-read current source and generate new document/evidence/contract
+fingerprints. The profiles currently share analysis methods, not an automatically merged evidence
+store.
 
 ## Full profile outputs
 

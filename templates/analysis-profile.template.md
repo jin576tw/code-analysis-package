@@ -111,10 +111,13 @@ feature — e.g. "search xhtml under webapp", "controllers annotated @RestContro
 
 `analysis_profile`: `full` (default) | `fast`
 
-`full` preserves the nine-document DAG and its quality gates. `fast` uses `fast_schema: 2` and
-produces one integrated target document plus evidence/review artifacts. It dispatches one Maker
-and one independent Reviewer, permits one Maker repair followed by a complete re-review, and
-requires `diff_rate <= 0.10` for delivery readiness. Earlier Fast output is `fast-legacy`.
+`full` preserves the nine-document DAG and its quality gates. `fast` uses `fast_schema: 3`, reuses
+the core collectors without materializing their Full documents, and produces the project
+contract's target document plus evidence/review artifacts. It dispatches one Maker and one
+independent Reviewer, permits one Maker repair followed by a complete re-review, and requires
+`diff_rate <= 0.10` for delivery readiness. Schema 2 is `fast-v2-legacy`.
+
+- **Fast output contract path**: <relative path to project-owned output-contract JSON>
 
 Both profiles use the four-value UI risk decision:
 `static_pass | playwright_required | not_applicable | blocked_runtime_evidence`.

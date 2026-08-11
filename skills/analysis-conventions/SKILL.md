@@ -304,25 +304,27 @@ Confidence mapping (per §8):
 
 ---
 
-## 12. Fast schema 2 provenance
+## 12. Fast schema 3 provenance
 
-Fast is an output-contract-driven, single-document profile. It does not produce a cheaper copy of
-the Full nine-document DAG. Put this banner immediately after the integrated document's entry
-point line:
+Fast is a project-output-contract-driven, single-document profile. It reuses the core analysis
+collectors but does not materialize the Full nine-document DAG. Put this banner immediately after
+the target document's entry-point line:
 
 ```markdown
-> `analysis_profile: fast` | `fast_schema: 2` | `artifact_class: fast-v2`
-> Output-contract-driven integrated analysis. Delivery readiness requires an independent Reviewer
-> PASS for the current document/evidence fingerprints and `diff_rate <= 0.10`.
+> `analysis_profile: fast` | `fast_schema: 3` | `artifact_class: fast-v3`
+> Project-contract-driven integrated analysis. Delivery readiness requires an independent
+> Reviewer PASS for the current document/evidence/contract fingerprints and `diff_rate <= 0.10`.
 ```
 
 Rules:
 
-1. Write only one integrated target document plus the run-local evidence artifact.
+1. Write only the contract-named target document plus the run-local evidence artifact.
 2. Leave `delivery_ready=false`; only the contract validator may derive readiness after review.
-3. Treat earlier Fast output without schema 2 as `fast-legacy`. Never relabel it as current.
-4. Cite all source-derived facts. Keep unapproved target design labelled proposed.
-5. Label Mock HTML, Mock services, generated test data, and Mock screenshots as `simulation`.
+3. Treat schema 2 as `fast-v2-legacy` and earlier output as `fast-legacy`. Never relabel it current.
+4. Use only evidence IDs and target sections declared by the project contract.
+5. Record each selected core collector with `materialized_document=false`.
+6. Cite all source-derived facts. Keep unapproved target design labelled proposed.
+7. Label Mock HTML, Mock services, generated test data, and Mock screenshots as `simulation`.
    Simulation never proves live runtime behavior.
 6. Use the UI risk decision contract. Static evidence may close deterministic server-rendered UI;
    browser-only behavior requires Playwright or blocks when material and unavailable.

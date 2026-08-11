@@ -176,12 +176,13 @@ foreach ($hit in $badLegacy) {
 }
 Write-Host "[ok] verify-report naming / quality schema check done" -ForegroundColor Green
 
-# 10. fast_schema 2 contract surface
+# 10. fast_schema 3 project-contract surface
 $fastRequired = @(
   'skills/fast-analysis/SKILL.md',
   'skills/fast-analysis/references/output-contract.md',
   'agents/fast-analysis-maker.md',
   'agents/fast-analysis-reviewer.md',
+  'templates/fast-output-contract.template.json',
   'templates/fast-evidence.template.json',
   'templates/fast-review.template.json',
   'scripts/Get-UiRiskDecision.ps1',
@@ -198,21 +199,47 @@ foreach ($jsonRelative in @('templates/fast-evidence.template.json','templates/f
   if (Test-Path -LiteralPath $jsonPath) {
     try {
       $fastJson = Get-Content -LiteralPath $jsonPath -Raw -Encoding UTF8 | ConvertFrom-Json
-      if ($fastJson.fast_schema -ne 2) { $problems.Add("$jsonRelative must declare fast_schema 2") }
+      if ($fastJson.fast_schema -ne 3) { $problems.Add("$jsonRelative must declare fast_schema 3") }
     } catch { $problems.Add("$jsonRelative is invalid JSON: $_") }
   }
+}
+$contractTemplate = Join-Path $Root 'templates/fast-output-contract.template.json'
+if (Test-Path -LiteralPath $contractTemplate) {
+  try {
+    $contractJson = Get-Content -LiteralPath $contractTemplate -Raw -Encoding UTF8 | ConvertFrom-Json
+    if ($contractJson.contract_schema -ne 1) { $problems.Add('Fast output-contract template must declare contract_schema 1') }
+    if (@($contractJson.evidence_requirements).Count -eq 0) { $problems.Add('Fast output-contract template has no evidence requirements') }
+  } catch { $problems.Add("Fast output-contract template is invalid JSON: $_") }
 }
 $startCommand = Join-Path $Root 'commands/start-analysis.md'
 if (Test-Path -LiteralPath $startCommand) {
   $startText = Get-Content -LiteralPath $startCommand -Raw -Encoding UTF8
-  foreach ($marker in @('fast_schema=2','fast-analysis-maker','fast-analysis-reviewer','diff_rate <= 0.10','fast-legacy')) {
+  foreach ($marker in @('fast_schema=3','--output-contract','fast-analysis-maker','fast-analysis-reviewer','diff_rate <= 0.10','fast-v2-legacy')) {
     if (-not $startText.Contains($marker)) { $problems.Add("start-analysis missing Fast contract marker: $marker") }
   }
   if ($startText -match 'Both profiles produce the \*\*same document set') {
     $problems.Add('start-analysis still claims Fast and Full produce the same document set')
   }
 }
-Write-Host "[ok] fast_schema 2 contract check done" -ForegroundColor Green
+$fastSurface = @(
+  'commands/start-analysis.md',
+  'skills/fast-analysis/SKILL.md',
+  'skills/fast-analysis/references/output-contract.md',
+  'agents/fast-analysis-maker.md',
+  'agents/fast-analysis-reviewer.md',
+  'templates/fast-evidence.template.json',
+  'templates/fast-review.template.json',
+  'templates/fast-output-contract.template.json'
+)
+foreach ($relative in $fastSurface) {
+  $path = Join-Path $Root $relative
+  if (-not (Test-Path -LiteralPath $path)) { continue }
+  $text = Get-Content -LiteralPath $path -Raw -Encoding UTF8
+  foreach ($forbidden in @('FAST-SA.md','scope_uc','flow_rules','screen_fields','api_contracts','data_model_and_supplementary','SA-first')) {
+    if ($text.Contains($forbidden)) { $problems.Add("Generic Fast surface hard-codes project output '$forbidden': $relative") }
+  }
+}
+Write-Host "[ok] fast_schema 3 project-contract check done" -ForegroundColor Green
 
 # Report
 Write-Host ""

@@ -1,13 +1,15 @@
 {
-  "fast_schema": 2,
-  "classification": "fast-v2",
+  "fast_schema": 3,
+  "classification": "fast-v3",
   "verdict": "PENDING | PASS | FAIL",
-  "maker_artifact_sha256": "<sha256>",
+  "target_document_sha256": "<sha256>",
   "evidence_sha256": "<sha256>",
+  "output_contract_sha256": "<sha256>",
   "reviewed_at": "<ISO-8601>",
   "review_round": 1,
   "diff_rate": null,
   "coverage_complete": false,
+  "collectors_verified": false,
   "ui_risk_accepted": false,
   "findings": [],
   "delivery_ready": false

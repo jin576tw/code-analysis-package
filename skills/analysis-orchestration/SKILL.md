@@ -1,6 +1,6 @@
 ---
 name: analysis-orchestration
-description: Orchestrate code-analysis runs, selecting either the established Full nine-document DAG or the fast_schema 2 output-contract-driven single-document Maker/Reviewer workflow. Enforces state, human gates, quality, UI-risk, review-fingerprint, and delivery-readiness contracts.
+description: Orchestrate code-analysis runs, selecting either the established Full nine-document DAG or the fast_schema 3 project-contract-driven single-document Maker/Reviewer workflow. Enforces state, human gates, quality, UI-risk, contract/review fingerprints, and delivery-readiness contracts.
 ---
 
 # Analysis orchestration
@@ -24,29 +24,29 @@ contract. Require an explicit `--full` or `--fast`.
    a completed finding are allowed; new technical content returns to its Maker.
 6. Treat session/quota limits as blocked, not failed. Never spend a repair attempt on them.
 
-## Fast profile (`fast_schema: 2`)
+## Fast profile (`fast_schema: 3`)
 
-Load `fast-analysis`. The output contract is one integrated target document, not the Full DAG.
-Create only the Maker, UI-risk, Reviewer, and contract-validation stages.
+Load `fast-analysis` and require the project output-contract path from the command or profile. The
+contract names one target document, its required sections, and its evidence requirements. Create
+only the Maker, UI-risk, Reviewer, and contract-validation stages.
 
-### Evidence-driven Maker
+### Core collectors without materialized layer documents
 
-Dispatch `fast-analysis-maker` with required target headings. It walks those headings backward to
-the six evidence groups: scope/UC, flow/rules, screen/fields, API, interactions/transactions, and
-data model/supplementary specifications. It writes the integrated document and evidence JSON with
+Dispatch `fast-analysis-maker` with the exact contract. For each evidence requirement it selects
+the named core collectors from dependencies, symbols/data, data model, functions, execution flow,
+business rules, UI behavior, API contract, and system design. These reuse the Full analysis
+methods, but write evidence into `fast-evidence.json` with `materialized_document=false`; they do
+not create the nine Full documents. The Maker writes the contract-named target document and leaves
 `delivery_ready=false`.
-
-Do not dispatch `deps`, `vars`, `erd`, `funcs`, `flow`, `rules`, `sd`, `api-contract`, or the
-AS-IS `sa` agent in Fast. Those names may appear as coverage concepts inside the single document,
-not as intermediate deliverables.
 
 ### Independent review and bounded repair
 
 Dispatch `fast-analysis-reviewer` after Maker output is fingerprinted. PASS requires:
 
-- `fast_schema == 2` and artifact class `fast-v2`;
-- all required sections and evidence groups covered or evidenced N/A;
-- current Maker and evidence SHA-256 values;
+- `fast_schema == 3` and artifact class `fast-v3`;
+- every required contract section and evidence requirement covered or contract-authorized N/A;
+- all contract-named core collectors recorded without materialized Full documents;
+- current target-document, evidence, and output-contract SHA-256 values;
 - no material blocked runtime evidence;
 - `diff_rate <= 0.10`;
 - review `delivery_ready=true` for the exact fingerprints.
@@ -54,8 +54,18 @@ Dispatch `fast-analysis-reviewer` after Maker output is fingerprinted. PASS requ
 On FAIL, send every finding to the Maker in one repair prompt, allow one repair, then run a full
 Reviewer pass. Do not perform delta-only review. A second FAIL blocks the run.
 
-An artifact without schema 2 is `fast-legacy`. It remains non-delivery-ready even if old metadata
-says otherwise; rerun both v2 roles.
+Schema 2 is `fast-v2-legacy`; earlier or missing schemas are `fast-legacy`. They remain
+non-delivery-ready even if old metadata says otherwise; rerun both v3 roles with a project
+contract.
+
+### Fast/Full escalation
+
+Recommend a new Full run after explicit human confirmation when Fast exposes expanding scope,
+unresolved cross-layer contradictions, material blocked runtime evidence, `diff_rate > 0.10`, or a
+second Reviewer failure. Never mutate the Fast run into a Full run or relabel its artifacts. A
+completed Full baseline may inform a later bounded Fast run, but Fast must still re-read current
+source and produce fresh document/evidence/contract fingerprints. The profiles share collector
+methods; they do not yet share an automatically merged evidence store.
 
 ## Full profile
 
@@ -115,11 +125,12 @@ skipped. Do not call a Mock comparison runtime evidence.
 
 ## State and summary
 
-The state template carries `fast_schema`, `artifact_class`, `delivery_ready`, `ui_risk_decision`,
-Maker attempts, and Reviewer fingerprints. For Full these Fast-only fields are null. For Fast use
-schema 2 values and only Fast stages.
+The state template carries `fast_schema`, `artifact_class`, `output_contract_path`,
+`output_contract_sha256`, `delivery_ready`, `ui_risk_decision`, Maker attempts, and Reviewer
+fingerprints. For Full these Fast-only fields are null. For Fast use schema 3 values and only Fast
+stages.
 
 Summaries and `runs.md` must report profile, classification, UI decision, diff rate, review status,
 and delivery readiness. A Fast run is done only after `Test-FastAnalysisContract.ps1` returns a
-valid, delivery-ready `fast-v2` result. Full completion continues to use the established quality
+valid, delivery-ready `fast-v3` result. Full completion continues to use the established quality
 and static verification gates.

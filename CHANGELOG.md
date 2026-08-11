@@ -3,6 +3,23 @@
 All notable changes to this plugin are documented here.
 This project adheres to [Semantic Versioning](https://semver.org).
 
+## [0.12.0] - 2026-08-11
+
+### Changed
+- Generalized Fast from the SA-specific schema 2 workflow to `fast_schema: 3`. Fast now requires a
+  project-owned output contract that declares the target document, required sections, evidence
+  requirements, and the core collectors needed to support them.
+- Reused the existing dependency, symbol/data, data-model, function, flow, rule, UI, API, and
+  system-design analysis methods as non-materialized Fast collectors. Full still owns the
+  nine-document DAG and remains otherwise unchanged.
+- Moved domain section/evidence decisions out of the package. Schema 2 is now
+  `fast-v2-legacy`; earlier Fast artifacts remain `fast-legacy`.
+- Extended the contract validator and fixtures to verify the output-contract fingerprint,
+  arbitrary project contracts, collector execution, target coverage, evidence integrity,
+  Reviewer freshness, version sync, difference threshold, and risk-based UI behavior.
+- Updated the Fast run-state contract to schema `1.7` with output-contract path and fingerprint.
+- Synchronized plugin and marketplace versions at `0.12.0`.
+
 ## [0.11.0] - 2026-08-10
 
 ### Changed

@@ -1,0 +1,35 @@
+{
+  "contract_schema": 1,
+  "contract_id": "<project>:<analysis-purpose>:v1",
+  "target_document": {
+    "path": "ANALYSIS.md",
+    "role": "project-defined-integrated-analysis",
+    "required_sections": ["scope", "behavior", "technical-impact"]
+  },
+  "evidence_requirements": [
+    {
+      "id": "scope",
+      "description": "Confirmed entry point, boundary, dependencies, and exclusions",
+      "required": true,
+      "allowed_not_applicable": false,
+      "collectors": ["dependencies"],
+      "target_sections": ["scope"]
+    },
+    {
+      "id": "behavior",
+      "description": "Execution flow and observable rules supported by literal source",
+      "required": true,
+      "allowed_not_applicable": false,
+      "collectors": ["functions", "execution_flow", "business_rules"],
+      "target_sections": ["behavior"]
+    },
+    {
+      "id": "technical-impact",
+      "description": "Relevant API, data, UI, and system-design impact",
+      "required": true,
+      "allowed_not_applicable": false,
+      "collectors": ["symbols_data", "data_model", "ui_behavior", "api_contract", "system_design"],
+      "target_sections": ["technical-impact"]
+    }
+  ]
+}
