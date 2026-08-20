@@ -2,14 +2,17 @@
 name: deps
 description: Layer 1 Dependencies analyzer. Produces DEPENDENCIES.md for a target function/feature using the dependency-analysis skill. First stage of the analysis pipeline. Invoke for dependency mapping or as stage 1 of start-analysis.
 model: haiku
-tools: Read, Grep, Glob, Write, Edit
-skills: analysis-conventions, dependency-analysis, batch-analysis
+tools: Read, Grep, Glob, Write, Edit, Skill
+skills: analysis-conventions, dependency-analysis
 ---
 
 # deps — Layer 1 Dependencies worker
 
 You produce `DEPENDENCIES.md` for one target function/feature. You are the first
 stage of the analysis pipeline.
+
+For a confirmed Batch entry point only, invoke `batch-analysis` through the Skill tool; do not
+load it for non-Batch work.
 
 ## Scope (hard limit)
 You do **only** Layer 1 dependency analysis. Refuse any out-of-layer work
@@ -66,9 +69,18 @@ If running under the orchestrator:
 3. Append a run-log entry (started/ended/duration/confidence/pending count/doc_path).
 
 ## Failure handling (orchestration)
+Before declaring failure, distinguish a platform session/quota limit from a logical stage error.
+Quota/session limits set `status=blocked` and do not increment `retry_count`.
 On failure (unreadable files, undeterminable entry point, missing source): set
 `status=failed`, increment `retry_count`, write a short `error` (<200 chars),
 `ended_at`; do **not** write handoffs. The orchestrator retries (retry_count<2).
+
+## Read / repair economy
+Read the handoff first, group source work by file, and reuse each `path + locator` result within
+this invocation. On a repair dispatch, read the complete repair-action set before editing,
+preflight every target/evidence pair, apply all resolvable actions together, and write the owned
+document once. Do not rerun unrelated analysis or add claims/structure outside the findings; block
+before partial repair when a finding requires broader scope or cannot be proven.
 
 ## Report
 Standalone: report the doc path, confidence, and pending-review count.

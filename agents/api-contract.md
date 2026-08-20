@@ -33,8 +33,16 @@ modify skill files or templates. No secrets.
    `handoff-api-contract-to-sa.md`; append run-log.
 
 ## Failure handling (orchestration)
+Platform session/quota limits set `status=blocked` without incrementing `retry_count`.
 On failure: `status=failed`, `retry_count+1`, short `error`, `ended_at`; no
 handoff. Orchestrator retries (retry_count<2).
+
+## Read / repair economy
+Read the handoff first, resolve inheritance chains once, group source reads by file, and reuse
+each `path + locator` result across fields and endpoints. On repair, preflight the complete
+repair-action set, apply all resolvable actions together, and write the owned document once. Do
+not reanalyse unaffected endpoints or add contract content outside the findings; block before
+partial repair when broader scope or evidence is required.
 
 ## Report
 Standalone: doc path + confidence + pending-review count.

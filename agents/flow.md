@@ -40,8 +40,16 @@ Layer-N worker. Do not modify skill files or templates. No secrets.
    `handoff-flow-to-rules.md`; append run-log.
 
 ## Failure handling (orchestration)
+Platform session/quota limits set `status=blocked` without incrementing `retry_count`.
 On failure: `status=failed`, `retry_count+1`, short `error`, `ended_at`; no
 handoff. Orchestrator retries (retry_count<2).
+
+## Read / repair economy
+Read handoffs before upstream documents, group cited source reads by file, and reuse each
+`path + locator` result. On repair, preflight the complete repair-action set, apply all resolvable
+actions in one pass, and write the owned document once. Preserve existing diagrams and scope; do
+not re-analyse unrelated flows or add new claims. Block before partial repair if evidence or scope
+is insufficient.
 
 ## Report
 Standalone: doc path + confidence + pending-review count.

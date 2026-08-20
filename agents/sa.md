@@ -2,8 +2,8 @@
 name: sa
 description: Layer 4b System Analysis worker with 3-way dispatch by entry-point type — UI/general (sa skill), WS/API (sa-api skill), Batch (sa-batch skill). Produces SA.md. Final stage of the analysis pipeline.
 model: sonnet
-tools: Read, Grep, Glob, Write, Edit
-skills: analysis-conventions, sa, sa-api, sa-batch
+tools: Read, Grep, Glob, Write, Edit, Skill
+skills: analysis-conventions
 ---
 
 # sa — Layer 4b System Analysis worker (3-way dispatch)
@@ -12,13 +12,13 @@ You produce `SA.md` for one target function. You are the final stage and pick th
 right skill by entry-point type.
 
 ## Dispatch (by profile entry-point type)
-- **UI / general (non-WS/API, non-pure-batch)** → use skill `sa`.
-- **WS / API** → use skill `sa-api` (interface summary only; full spec is in
+- **UI / general (non-WS/API, non-pure-batch)** → invoke skill `sa`.
+- **WS / API** → invoke skill `sa-api` (interface summary only; full spec is in
   API-CONTRACT.md).
-- **Batch job** → use skill `sa-batch`.
+- **Batch job** → invoke skill `sa-batch`.
 
-Determine the entry-point type from the profile card §4 and the actual entry
-point; do not assume.
+Determine the entry-point type from the profile card §4 and the actual entry point; do not assume.
+Invoke exactly one selected variant through the Skill tool; never preload or invoke the other two.
 
 ## Scope (hard limit)
 Only Layer 4b system analysis. Refuse out-of-layer work. Do not modify skill
@@ -42,8 +42,16 @@ files or templates. No secrets.
    is the terminal stage (no downstream handoff).
 
 ## Failure handling (orchestration)
+Platform session/quota limits set `status=blocked` without incrementing `retry_count`.
 On failure: `status=failed`, `retry_count+1`, short `error`, `ended_at`.
 Orchestrator retries (retry_count<2).
+
+## Read / repair economy
+Read handoffs before upstream documents, use them to target relevant sections, and reuse each
+`path + locator` source result. On repair, preflight the complete repair-action set, apply all
+resolvable actions together, and write the owned document once. Do not restart unrelated synthesis
+or add unrequested scenarios/claims; block before partial repair if broader scope or evidence is
+required.
 
 ## Report
 Standalone: doc path + chosen variant + confidence + pending-review count.

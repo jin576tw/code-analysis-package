@@ -2,8 +2,8 @@
 name: vspec-patch
 description: Verify sub-agent. Reads verify-report.md diffs and patches them back into SD.md and clearly-owned sibling docs (code is source of truth). Standalone mode: produces patch-plan.md and waits for orchestrator confirmation before applying. Pipeline mode: auto-applies patches and writes patch log. Depends on vspec-report. Produces patch-plan.md; updates patched docs; updates state.json patch stage.
 model: sonnet
-tools: Read, Grep, Glob, Write, Edit
-skills: analysis-conventions, analysis-orchestration, verify-spec
+tools: Read, Grep, Glob, Write, Edit, Skill
+skills: analysis-conventions, verify-spec
 ---
 
 # vspec-patch — targeted diff patcher
@@ -42,6 +42,10 @@ Classify each D-XX:
 - **`structural-defer`** — requires redrawing an entire diagram, reorganising doc structure; impact spans >4 SD sections; impacts more than two owner docs; or the code evidence is insufficient to derive correct content without a full re-read. Mark deferred; do not touch; set `pending_human=true` and recommend Mode B/A rerun scope.
 
 ### Step 3 — Map to target documents
+Invoke the `analysis-orchestration` skill only when at least one item is classified
+`structural-defer` and a resume-mode recommendation is required. Do not load it for a fully
+localized patch set.
+
 For each `patchable-localized` diff:
 
 | Diff nature | Patch SD.md | Also patch sibling |
@@ -91,16 +95,20 @@ If any deferred item is `structural-defer`, add a **Human confirmation required*
   - `n` → read state.json → set patch stage `status = "skipped"`, `ended_at` → write back; stop and report: `⏭️ vspec-patch skipped by user.`
 
 ### Step 6 — Apply patches
-For each `patchable-localized` diff in the plan (SD.md first, then any sibling):
+Before editing, validate every patchable D-XX against its cited code evidence and target section.
+If an item needs broader scope or cannot be proven, reclassify it before any document write; never
+leave a partially applied repair set.
 
-1. Read the target doc fully.
-2. Locate the exact section(s) referenced by `sd_location` / `fix_action`.
-3. Apply the fix:
+Group validated diffs by target document (SD.md first, then siblings). Read each target document
+once, apply all grouped changes in memory, and write that document once:
+
+1. Locate every exact section referenced by `sd_location` / `fix_action`.
+2. Apply each fix:
    - **⚠️ Omission**: insert the missing item at the correct position in the section, appending a code reference: `(code: \`<File>\` L.<N>)`.
    - **❌ Wrong**: replace the incorrect text with the code-correct value; preserve surrounding context and structure.
-4. Append a compact change-note at the bottom of each patched doc (before the final footer, if any):
+3. Append one compact change-note at the bottom of each patched doc (before the final footer, if any), listing every D-XX applied to it:
    `> Verify patch <YYYY-MM-DD>: D-XX[, D-YY…] (round N).`
-5. Write the full doc back.
+4. Write the full doc back once.
 
 Track each patched item as `"D-XX → <doc> §N.N"` in the `patched` list.
 
@@ -121,6 +129,8 @@ Read state.json fully → update the patch stage entry → write whole file back
 ```
 
 ## Failure handling
+Do not change unflagged sections, add new claims, or expand document structure. Platform
+session/quota limits set `status="blocked"` without incrementing `retry_count`.
 On error: set patch stage `status = "failed"`, `retry_count+1`, short `error`, `ended_at`; write state back. Orchestrator retries ≤2.
 
 ## Report

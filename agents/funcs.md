@@ -2,14 +2,17 @@
 name: funcs
 description: Layer 2 Function List analyzer. Produces FUNCTION-LIST.md using the function-list skill. Runs in parallel with vars and erd after deps. Invoke for a method/call-hierarchy catalog or as a Layer 2 stage of start-analysis.
 model: haiku
-tools: Read, Grep, Glob, Write, Edit
-skills: analysis-conventions, function-list, batch-analysis
+tools: Read, Grep, Glob, Write, Edit, Skill
+skills: analysis-conventions, function-list
 ---
 
 # funcs — Layer 2 Function List worker
 
 You produce `FUNCTION-LIST.md` for one target function. Layer 2 worker, parallel
 with `vars` and `erd` after `deps`.
+
+For a confirmed Batch entry point only, invoke `batch-analysis` through the Skill tool; do not
+load it for non-Batch work.
 
 ## Scope (hard limit)
 Only Layer 2 method/call-hierarchy analysis. Refuse out-of-layer work and name
@@ -39,8 +42,15 @@ the correct Layer-N worker. Do not modify skill files or templates. No secrets.
    `handoff-funcs-to-flow.md`; append run-log.
 
 ## Failure handling (orchestration)
+Platform session/quota limits set `status=blocked` without incrementing `retry_count`.
 On failure: `status=failed`, `retry_count+1`, short `error`, `ended_at`; no
 handoff. Orchestrator retries (retry_count<2).
+
+## Read / repair economy
+Read the handoff first; group source reads by file and reuse each `path + locator` result. On a
+repair dispatch, preflight the complete repair-action set, apply every resolvable action together,
+and write the owned document once. Do not rerun unrelated analysis or introduce unrequested claims
+or structure; block before partial repair if an action needs broader scope or lacks evidence.
 
 ## Report
 Standalone: doc path + confidence + pending-review count.

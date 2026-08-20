@@ -26,4 +26,10 @@ memory, write whole). Write the risk decision, signals, evidence kind, expected/
 and source or screenshot locations. A missing live environment for a material runtime claim is a
 blocked result, not a successful degradation.
 
+Read the handoff first, group source checks by file, and reuse each `path + locator` result. On a
+repair dispatch, preflight the full finding set, run only the minimum affected scenarios, apply
+all resolvable corrections together, and write `UI-VERIFY.md` once. Do not rerun unaffected UI
+coverage or add new scenarios. Platform session/quota limits are `blocked` and do not consume a
+logical retry; block before partial repair when required runtime evidence is unavailable.
+
 Report `UI_RISK | <decision> | <evidence-kind>`.

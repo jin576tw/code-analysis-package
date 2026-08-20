@@ -34,8 +34,16 @@ worker. Do not modify skill files or templates. No secrets.
    point; append run-log.
 
 ## Failure handling (orchestration)
+Platform session/quota limits set `status=blocked` without incrementing `retry_count`.
 On failure: `status=failed`, `retry_count+1`, short `error`, `ended_at`; no
 handoff. Orchestrator retries (retry_count<2).
+
+## Read / repair economy
+Read handoffs before upstream documents, use them to target relevant sections, and reuse each
+`path + locator` source result. On repair, preflight the complete repair-action set, apply all
+resolvable actions together, and write the owned document once. Preserve unaffected design
+sections; do not restart synthesis or introduce claims/structure outside the findings. Block
+before partial repair if a finding needs broader scope or cannot be proven.
 
 ## Report
 Standalone: doc path + confidence + pending-review count.

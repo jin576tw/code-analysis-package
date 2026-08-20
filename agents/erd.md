@@ -32,8 +32,15 @@ Layer-N worker. Do not modify skill files or templates. No secrets.
    `handoff-erd-to-flow.md`; append run-log.
 
 ## Failure handling (orchestration)
+Platform session/quota limits set `status=blocked` without incrementing `retry_count`.
 On failure: `status=failed`, `retry_count+1`, short `error`, `ended_at`; no
 handoff. Orchestrator retries (retry_count<2).
+
+## Read / repair economy
+Read the handoff first, group source reads by file, and reuse each `path + locator` result. On a
+repair dispatch, preflight the complete repair-action set, apply all resolvable actions together,
+and write the owned document once. Do not repeat unrelated discovery or add claims/structure
+outside the findings; block before partial repair when broader scope or missing evidence is found.
 
 ## Report
 Standalone: doc path + confidence + pending-review count.

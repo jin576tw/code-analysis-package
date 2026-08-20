@@ -52,7 +52,10 @@ analysis docs or real source. No secrets.
    `<doc_root>/SD.md` directly (direct-claims mode); do not write harness files.
    `<harness_dir>` default `.analysis/harness`.
    When writing state.json: read whole file → modify in memory → write back whole.
-2. Per the selected mode, item by item (method signatures, I/O types,
+2. Build the complete claim inventory before judging. Normalize duplicate statements of the same
+   fact, group claims by source file/range, and read each `path + locator` once; reuse that evidence
+   for every affected document location. Perform a full sweep of every listed claim class without
+   sampling or early exit. Per the selected mode (method signatures, I/O types,
    branching — including boolean-operator placement, verified against the
    literal predicate structure — transaction settings, external calls,
    persisted fields, and — for reconstructed executable content — physical
@@ -63,12 +66,19 @@ analysis docs or real source. No secrets.
    - ❌ wrong — doc contradicts code.
    Cite real-code evidence (file + line) for every ❌/⚠️. Anti-hallucination:
    confirm from actual files; never assume.
-3. Write `handoff-static-to-report.md` containing **STATIC-DIFF** entries (id,
+3. Complete all classifications and counts in memory, then write
+   `handoff-static-to-report.md` exactly once containing **STATIC-DIFF** entries (id,
    type ✅/⚠️/❌, doc location, doc text, code evidence, explanation, impact) plus
    the running counts. Update state: `static.status=done`, `gate_passed=true`,
-   `confidence`, `ended_at`.
+   `confidence`, `ended_at`. Do not emit a provisional verdict or partial handoff.
+
+On a second verification round, report the complete remaining defect set once. If the same defect
+class persists, mark it non-convergent in the existing explanation/impact fields and stop; do not
+recommend another automatic repair round.
 
 ## Failure handling
+Platform session/quota limits set `static.status=blocked` without incrementing
+`retry_count`.
 On failure: `static.status=failed`, `retry_count+1`, short `error`, `ended_at`;
 no handoff. Orchestrator retries (≤2).
 

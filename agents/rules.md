@@ -40,8 +40,15 @@ correct Layer-N worker. Do not modify skill files or templates. No secrets.
    point); append run-log.
 
 ## Failure handling (orchestration)
+Platform session/quota limits set `status=blocked` without incrementing `retry_count`.
 On failure: `status=failed`, `retry_count+1`, short `error`, `ended_at`; no
 handoff. Orchestrator retries (retry_count<2).
+
+## Read / repair economy
+Read the handoff first, group rule citations by source file, and reuse each `path + locator`
+result. On repair, collect and preflight every repair action before editing, apply all resolvable
+actions together, and write the owned document once. Do not reopen unrelated rule discovery or
+add scenarios outside the findings; block before partial repair if broader scope is required.
 
 ## Report
 Standalone: doc path + confidence + pending-review count.
