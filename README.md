@@ -40,6 +40,9 @@ tool reads:
 # Full nine-document pipeline
 /start-analysis <FeatureOrEntryPoint> --full
 
+# Resume the exact next Full unit in a new session
+/start-analysis --resume <run_id>
+
 # Fast project-contract pipeline: core collectors, one target document, independent Reviewer
 /start-analysis <FeatureOrEntryPoint> --fast --output-contract <path>
 
@@ -63,6 +66,13 @@ requirements. Fast reuses the package's core collectors without materializing th
 documents, allows one Maker repair, and becomes delivery-ready only after a complete independent
 Reviewer PASS for current document/evidence/contract fingerprints with `diff_rate <= 0.10`.
 Schema 2 artifacts are `fast-v2-legacy`; earlier artifacts are `fast-legacy`.
+
+Full is checkpointed across sessions. The initial session confirms entry/scope, then each resume
+owns one unit and its complete quality repair/rescore loop: deps; Layer 2; flow; rules; UI verify;
+SD; API contract; SA; verify evidence; report/patch/finalize. Each boundary writes deterministic
+`next-session.json` and `next-session.md`. Resume rejects stale or tampered revision/hash state and
+does not rerun completed stages. Fast intentionally remains a single-session workflow and does not
+write these checkpoint files.
 
 Copy `templates/fast-output-contract.template.json` into the consuming project and adapt its
 sections and evidence requirements. Domain outputs such as an SA, audit memo, API brief, or data
@@ -109,8 +119,9 @@ card §7; default `.analysis/docs/<MODULE>/<FEATURE>/<PAGE>/<FUNCTION>/`):
 `start-analysis --full` runs the full pipeline end-to-end, starting with a hard entry-
 confirmation gate (ticket screenshot or explicit user confirmation before the
 first stage). Each document-producing stage — including `ui-verify`,
-`api-contract`, and `sa` — is gated by `quality-score` before downstream stages
-run, followed by an automatic verify phase after `sa`:
+  `api-contract`, and `sa` — is gated by `quality-score` before downstream stages
+  run. Full then stops at that unit boundary and resumes the next unit in a fresh session, followed
+  by the automatic verify phase after `sa`:
 
 ```
 [entry confirmation] → [scope card: SCOPE.md, user-confirmed] → deps
@@ -231,6 +242,8 @@ environment paths, and team workflow constraints in the target project.
 
 ```powershell
 powershell -NoProfile -ExecutionPolicy Bypass -File ./scripts/validate-plugin.ps1
+powershell -NoProfile -ExecutionPolicy Bypass -File ./scripts/Test-FullCheckpointFixtures.ps1
+powershell -NoProfile -ExecutionPolicy Bypass -File ./scripts/Test-FastContractFixtures.ps1
 ```
 Checks manifest validity, agent/skill frontmatter, skill references, and absence
 of project-specific hardcoding outside `templates/examples/`.

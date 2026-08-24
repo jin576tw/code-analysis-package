@@ -241,6 +241,33 @@ foreach ($relative in $fastSurface) {
 }
 Write-Host "[ok] fast_schema 3 project-contract check done" -ForegroundColor Green
 
+# 11. Full checkpoint/resume surface
+$checkpointRequired = @(
+  'scripts/New-AnalysisHandover.ps1',
+  'scripts/Resume-AnalysisHandover.ps1',
+  'scripts/Test-FullCheckpointFixtures.ps1'
+)
+foreach ($relative in $checkpointRequired) {
+  if (-not (Test-Path -LiteralPath (Join-Path $Root $relative) -PathType Leaf)) {
+    $problems.Add("Missing Full checkpoint file: $relative")
+  }
+}
+if (Test-Path -LiteralPath $stateTemplate) {
+  try {
+    $checkpointState = Get-Content -LiteralPath $stateTemplate -Raw -Encoding UTF8 | ConvertFrom-Json
+    if ([version]$checkpointState._schema_version -lt [version]'1.8') { $problems.Add('state.json schema must be at least 1.8 for checkpoint resume') }
+    if ($null -eq $checkpointState.PSObject.Properties['scope_confirmed']) { $problems.Add("state.json missing 'scope_confirmed'") }
+    if ($null -eq $checkpointState.PSObject.Properties['checkpoint']) { $problems.Add("state.json missing 'checkpoint'") }
+  } catch { $problems.Add("state.json checkpoint schema is invalid: $_") }
+}
+if (Test-Path -LiteralPath $startCommand) {
+  $startText = Get-Content -LiteralPath $startCommand -Raw -Encoding UTF8
+  foreach ($marker in @('--resume <run_id>','New-AnalysisHandover.ps1','Resume-AnalysisHandover.ps1','report-patch-finalize','Fast remains one session')) {
+    if (-not $startText.Contains($marker)) { $problems.Add("start-analysis missing checkpoint marker: $marker") }
+  }
+}
+Write-Host "[ok] Full checkpoint/resume surface check done" -ForegroundColor Green
+
 # Report
 Write-Host ""
 if ($warnings.Count) {

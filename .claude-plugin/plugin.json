@@ -2,8 +2,8 @@
   "$schema": "https://json.schemastore.org/claude-code-plugin-manifest.json",
   "name": "code-analysis-package",
   "displayName": "Code Analysis Package",
-  "version": "0.12.0",
-  "description": "Cross-project reverse-engineering toolkit with a full layered DAG and a fast_schema 3 project-contract-driven Maker/Reviewer workflow, driven by a per-project profile card.",
+  "version": "0.13.0",
+  "description": "Cross-project reverse-engineering toolkit with checkpointed Full analysis and a single-session fast_schema 3 project-contract workflow, driven by a per-project profile card.",
   "author": {
     "name": "jin576tw",
     "url": "https://github.com/jin576tw"

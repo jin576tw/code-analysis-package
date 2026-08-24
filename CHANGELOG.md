@@ -3,6 +3,23 @@
 All notable changes to this plugin are documented here.
 This project adheres to [Semantic Versioning](https://semver.org).
 
+## [0.13.0] - 2026-08-24
+
+### Added
+- Added `/start-analysis --resume <run_id>` for deterministic Full-profile continuation.
+- Added `next-session.json` as the machine resume contract and `next-session.md` as the exact read
+  list/resume instruction for the next session.
+- Added PowerShell checkpoint generation/resume validation with revision and canonical resume-state
+  SHA-256 rejection, plus fixtures proving deps is not rerun when advancing to Layer 2.
+
+### Changed
+- Split Full into explicit session units from scope through report/patch/finalize. Each unit keeps
+  its quality repair/rescore loop local, checkpoints at a terminal gate, and stops before the next
+  unit.
+- Bumped the run-state schema to 1.8 with `scope_confirmed` and `checkpoint` fields.
+- Kept Fast as the existing single-session contract workflow without checkpoint artifacts.
+- Synchronized plugin and marketplace versions at `0.13.0`.
+
 ## [0.12.0] - 2026-08-11
 
 ### Changed

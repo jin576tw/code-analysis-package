@@ -1,11 +1,17 @@
 ---
 description: Run project-contract-driven fast analysis or the full nine-document reverse-analysis DAG. Fast reuses core collectors without materializing their individual documents; Full preserves the established layered workflow. Playwright is risk-based in both profiles.
-argument-hint: <FeatureOrEntryPoint> [--fast --output-contract <path> | --full]
+argument-hint: <FeatureOrEntryPoint> [--fast --output-contract <path> | --full] | --resume <run_id>
 ---
 
 # /start-analysis
 
 Target: `$ARGUMENTS`
+
+If invoked as `--resume <run_id>`, locate that exact run below the profile's harness root and run
+`scripts/Resume-AnalysisHandover.ps1`. Reject the resume unless its revision and
+`resume_state_sha256` match both `state.json` and `next-session.json`. Read every returned
+`read_paths` item, dispatch only the returned `pending_stages`, and never reset or rerun a completed
+stage. `--resume` is Full-only; a Fast run must reject it because Fast remains one session.
 
 Require one feature or confirmed entry point and exactly one profile flag. If the target is absent,
 ask for it. If the profile flag is absent, ask; never infer Fast from time pressure.
@@ -58,6 +64,24 @@ verification, and summary behavior. The only policy change is risk-based Playwri
 
 Static spec-vs-code verification remains required by the Full policy. Playwright and Mock are not
 synonyms: Mock can demonstrate a simulation but cannot prove live runtime behavior.
+
+### Full session checkpoints
+
+Full is a deterministic multi-session workflow. A normal invocation owns entry confirmation and
+the confirmed `scope` unit only. Each resume owns exactly one subsequent unit:
+
+`scope -> deps -> layer2(vars/erd/funcs) -> flow -> rules -> ui-verify -> sd -> api-contract -> sa -> verify-evidence -> report-patch-finalize`
+
+For every document unit, finish its quality repair and rescore loop in that same session. After a
+unit and its gate are terminal, run `scripts/New-AnalysisHandover.ps1` with the completed and next
+unit. It atomically writes `state.json`, `next-session.json`, and `next-session.md`; print the resume
+command and stop. Do not dispatch the next unit in the current session. The final
+`report-patch-finalize` unit writes the summary/runs index and completes without another handover.
+
+If `api-contract` is not applicable, record its existing skipped status/gate and still close that
+unit deterministically before handing over to `sa`. Quality repair/rescore never crosses a
+checkpoint. Session/quota interruption before a terminal gate keeps the same unit resumable and
+does not advance the checkpoint revision.
 
 ## Completion summary
 

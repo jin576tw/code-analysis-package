@@ -23,6 +23,8 @@ contract. Require an explicit `--full` or `--fast`.
 5. Never author worker-owned analysis in the orchestrator. Editorial changes explicitly named by
    a completed finding are allowed; new technical content returns to its Maker.
 6. Treat session/quota limits as blocked, not failed. Never spend a repair attempt on them.
+7. Full resume additionally requires `Resume-AnalysisHandover.ps1` to validate the exact run's
+   checkpoint revision and resume-state SHA-256. Fast never creates or consumes a checkpoint.
 
 ## Fast profile (`fast_schema: 3`)
 
@@ -79,6 +81,20 @@ Preserve the established nine-document DAG and its output paths:
 6. `api-contract` for API/WS entries
 7. `sa`
 8. spec-vs-code static report and patch stages
+
+### Full session ownership
+
+One Full session owns one unit and stops after its terminal quality gate. The ordered units are
+`scope`, `deps`, `layer2` (`vars`/`erd`/`funcs` together), `flow`, `rules`, `ui-verify`, `sd`,
+`api-contract`, `sa`, `verify-evidence` (`vspec-mock`/`vspec-e2e`/`vspec-static`), and
+`report-patch-finalize` (`vspec-report`/`vspec-patch` plus summary/index finalization).
+
+After each unit except the final unit, call `New-AnalysisHandover.ps1`. The generated
+`next-session.json` is the machine resume contract; `next-session.md` is the human-readable read
+list and exact `/start-analysis --resume <run_id>` command. A repeated generator call at the same
+boundary is idempotent. Any revision/hash mismatch, changed post-checkpoint stage projection, or
+attempt to schedule a completed stage is a hard resume rejection. Repair and rescore remain inside
+the current unit/session and must reach a terminal gate before checkpoint advancement.
 
 Every document-producing stage still receives an independent `quality-score` decision. Layer 2
 is scored as one batch but decided per document.

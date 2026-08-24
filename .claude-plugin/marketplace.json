@@ -10,8 +10,8 @@
     {
       "name": "code-analysis-package",
       "source": "./",
-      "description": "Full layered code analysis plus fast_schema 3 project-contract-driven Maker/Reviewer analysis, decoupled through a project profile card.",
-      "version": "0.12.0"
+      "description": "Checkpointed Full code analysis plus single-session fast_schema 3 project-contract-driven Maker/Reviewer analysis, decoupled through a project profile card.",
+      "version": "0.13.0"
     }
   ]
 }
