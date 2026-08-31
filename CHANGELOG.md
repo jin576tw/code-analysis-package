@@ -3,6 +3,17 @@
 All notable changes to this plugin are documented here.
 This project adheres to [Semantic Versioning](https://semver.org).
 
+## [0.14.0] - 2026-08-31
+
+### Changed
+- Decoupled the illustrative SA §3.1 Mock screenshot from `ui-verify`/`playwright-verify` risk
+  classification. Previously a screenshot only existed as an incidental side effect of running
+  Mock/Playwright to resolve a `playwright_required` runtime claim, so a `static_pass` screen
+  (fully resolvable from static source citations) got no screenshot at all. Now every non-
+  `not_applicable` screen/dialog/tab object gets at least one Mock screenshot regardless of its
+  risk classification; the image is always marked `simulation` and never affects the risk
+  decision itself.
+
 ## [0.13.0] - 2026-08-24
 
 ### Added
