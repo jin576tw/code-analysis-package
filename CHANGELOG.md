@@ -3,6 +3,21 @@
 All notable changes to this plugin are documented here.
 This project adheres to [Semantic Versioning](https://semver.org).
 
+## [0.13.0] - 2026-09-07
+
+### 變更
+- 將 plugin 收斂為唯一的 `code-analysis` skill，採連續分析、雙向審查、一次集中修補與內容指紋續跑。
+- 移除舊的分層 skills、預先定義 agents、Full／Fast 指令、評分與驗證流程、PowerShell 腳本及舊模板。
+- README 改為繁體中文，補上指定分支安裝、Claude plugin／獨立 Skill、Codex 使用方式、跨專案設定、輸出要求與遷移說明。
+- 同步 plugin 與 marketplace 版本為 `0.13.0`。
+
+### 遷移注意
+- 舊的 `/analysis-init`、`/start-analysis`、`/verify-code` 與分層指令已移除，請改用 `code-analysis`。
+- 初始化已併入分析開頭；沿用有效專案設定，缺少時只辨識本次需要的資訊，不要求獨立初始化指令。
+- 保留既有 `.analysis-profile.md` 與分析文件；舊 harness 狀態不能當作新版 `run.json` 使用。
+- 仍可使用一個環境允許的獨立 Reviewer；沒有預先定義的 agent 檔案不代表禁止子代理。
+- 下方 `0.12.0` 及更早版本為歷史紀錄，描述的舊檔案與指令不屬於目前套件。
+
 ## [0.12.0] - 2026-08-11
 
 ### Changed

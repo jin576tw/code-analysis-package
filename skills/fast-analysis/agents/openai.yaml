@@ -1,4 +1,0 @@
-interface:
-  display_name: "Fast Analysis"
-  short_description: "Build one reviewed project-contract analysis"
-  default_prompt: "Use $fast-analysis with a project output contract to build one evidence-backed reviewed analysis document."

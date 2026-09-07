@@ -64,7 +64,8 @@ flowchart TD
 | Codex | `.agents/skills/code-analysis/` | `$code-analysis 分析取消訂單，交付一份 SA` |
 
 官方依據（2026-09-06 查核）：[Claude Code](https://code.claude.com/docs/en/skills)、[Codex](https://learn.chatgpt.com/docs/build-skills)。
-既有 plugin 使用者可從 plugin 中載入此新 skill；舊 `/start-analysis` 指令不會自動改走新版。
+以 Claude Code plugin 安裝時，使用 `/code-analysis-package:code-analysis`；獨立複製 skill 時才使用上表短名稱。
+自 `0.13.0` 起，plugin 僅保留此 skill，舊 `/analysis-init`、`/start-analysis`、`/verify-code` 與分層指令已移除。完整安裝與更新方式見 [README](../README.md)。
 Node.js 僅用於輔助工具，無 npm install；無 Node.js 時依 skill 說明以可用雜湊工具完成核對並揭露續跑能力限制。
 
 例：`分析 src/orders.mjs 的取消訂單功能，涵蓋權限、狀態、例外與副作用，交付 ANALYSIS.md。`
@@ -102,3 +103,11 @@ node --test tests/code-analysis/checkpoint.test.mjs
 這次實跑驗證的是「來源與草稿未變動的中斷恢復」；檔案變動與部分修補恢復由輔助工具測試覆蓋，尚未做另一個完整代理情境。
 未在獨立 Claude Code 安裝環境或 Windows 執行，也未測試真實資料庫、退款服務或瀏覽器。
 格式相容不等於兩平台所有版本都已實測；單一案例不能量化長期 token／時間節省，也不能保證平台永不中斷。
+
+### Plugin 清理驗證（0.13.0）
+
+- 移除 61 個舊流程檔案，僅保留一個可發現的分析 Skill；新版 Skill 的 10 個檔案與行為未變。
+- Claude Code CLI 對 plugin manifest、marketplace manifest 與 skills 目錄的 `--strict` 驗證均通過。
+- 確認 plugin／marketplace 版本一致、18 個本機文件連結可解析，且無殘留舊工具相依。
+- 複製完整 Skill 至隔離專案後，輔助工具可正常載入並拒絕不存在的 run；20／20 快照工具測試再次通過。
+- 本次驗證針對套件清理、安裝資料夾結構與工具執行，沒有另外安裝到使用者的業務專案或重跑完整模型分析。

@@ -1,18 +1,7 @@
-# OS / editor
+# 作業系統／編輯器
 .DS_Store
 Thumbs.db
 *.swp
 
-# Local Claude Code settings (per-machine, not project content)
+# 本機 Claude Code 設定
 .claude/settings.local.json
-
-# Node (md-to-pdf / playwright may install here during use)
-node_modules/
-package-lock.json
-
-# Generated PDFs
-*.pdf
-
-# Playwright artifacts
-test-results/
-playwright-report/
