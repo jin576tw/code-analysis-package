@@ -18,6 +18,26 @@ per-project **profile card** (`.analysis-profile.md`).
 
 ## Install
 
+### Standalone unified skill for Claude Code / Codex
+
+The new [`code-analysis`](skills/code-analysis/SKILL.md) skill runs one continuous,
+deliverable-driven workflow with source evidence, bidirectional review, one bounded repair,
+and lightweight checkpoints. It has no Full/Fast switch, per-stage score loops, or mandatory
+session breaks. Copy the entire `skills/code-analysis/` directory to use it independently;
+the older commands below keep their existing behavior.
+
+| Tool | Project installation | Invocation |
+|---|---|---|
+| Claude Code | `.claude/skills/code-analysis/` | `/code-analysis <request>` |
+| Codex | `.agents/skills/code-analysis/` | `$code-analysis <request>` |
+
+Installation locations follow the official [Claude Code skills documentation](https://code.claude.com/docs/en/skills)
+and [Codex skills documentation](https://learn.chatgpt.com/docs/build-skills).
+The optional checkpoint helper uses Node.js with no npm dependencies. See the
+[design, usage, and validation report](docs/code-analysis-skill.md).
+
+### Existing Claude Code plugin
+
 ```bash
 claude plugin marketplace add https://github.com/jin576tw/code-analysis-package
 claude plugin install code-analysis-package@code-analysis-package
