@@ -34,6 +34,41 @@ flowchart TD
 
 ## 安裝
 
+可選擇 `npx`、Claude plugin 或手動複製。同一工具不必同時安裝 plugin 與獨立 Skill。
+
+### npx：直接安裝 Skill（建議）
+
+正確工具名稱是 **`skills`**，指令為 `npx skills add`。需要可用的 Node.js／npm 與 Git；不必先 clone 本 repo 或安裝 plugin。
+
+在**要分析的專案根目錄**執行，安裝給 Claude Code 與 Codex：
+
+```bash
+npx skills@latest add \
+  'https://github.com/jin576tw/code-analysis-package.git#codex/unified-code-analysis-skill' \
+  --skill code-analysis --agent claude-code codex --yes
+```
+
+`#codex/unified-code-analysis-skill` 指定新版分支；請保留完整來源並加引號，避免取得預設分支的舊流程。`--skill` 只選擇這個 Skill；`--agent` 指定安裝到哪些工具，與分析時是否呼叫子代理無關。只使用其中一個工具時，將參數改為 `--agent claude-code` 或 `--agent codex`。
+
+預設安裝到目前專案；需要個人共用安裝時加上 `--global`，實際位置依 CLI 顯示為準。`--yes` 略過安裝提示，省略時可互動選擇。
+
+安裝後可確認清單：
+
+```bash
+npx skills@latest list --agent claude-code codex
+```
+
+| 工具 | 安裝後的呼叫方式 |
+|---|---|
+| Claude Code | `/code-analysis 分析取消訂單功能，交付 SA.md。` |
+| Codex | `$code-analysis 分析取消訂單功能，交付 SA.md。` |
+
+這是獨立 Skill 安裝，Claude 不使用 plugin 命名空間。需要更新同一分支時，重新執行相同的 `add` 指令與安裝範圍；自行修改過 Skill 時先保存修改。
+
+已使用 `skills@1.5.24` 實測上述來源與參數：找到一個 Skill，Codex 安裝到 `.agents/skills/code-analysis/`，Claude Code 以 `.claude/skills/code-analysis` 連結共用內容。`@latest` 會取得 CLI 當前版本；需要重現本次測試時，可將它換成 `@1.5.24`。來源格式與選項見 [Skills CLI 官方說明](https://github.com/vercel-labs/skills)。
+
+### 取得原始碼：供 plugin 或手動安裝使用
+
 以下為終端機命令範例。將 `/path/to/code-analysis-package` 換成套件位置，將 `/path/to/your-project` 換成**要分析的專案根目錄**；兩者用途不同。
 
 先取得新版分支。已有這條分支的本機 checkout，可直接使用該路徑，不必再次 clone。
@@ -43,8 +78,6 @@ git clone --branch codex/unified-code-analysis-skill --single-branch \
   https://github.com/jin576tw/code-analysis-package.git \
   /path/to/code-analysis-package
 ```
-
-選擇下列一種安裝方式即可，同一工具不必同時安裝 plugin 與獨立 Skill。
 
 ### Claude Code：安裝 plugin
 

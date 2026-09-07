@@ -6,6 +6,7 @@ This project adheres to [Semantic Versioning](https://semver.org).
 ## [0.13.0] - 2026-09-07
 
 ### 變更
+- 新增 `npx skills add` 安裝方式，明確指定新版分支、Skill 與 Claude Code／Codex 安裝目標，並完成隔離安裝實測。
 - 將 plugin 收斂為唯一的 `code-analysis` skill，採連續分析、雙向審查、一次集中修補與內容指紋續跑。
 - 移除舊的分層 skills、預先定義 agents、Full／Fast 指令、評分與驗證流程、PowerShell 腳本及舊模板。
 - README 改為繁體中文，補上指定分支安裝、Claude plugin／獨立 Skill、Codex 使用方式、跨專案設定、輸出要求與遷移說明。
