@@ -136,13 +136,20 @@ cp -R /path/to/code-analysis-package/skills/code-analysis .claude/skills/
 Profile 是可選的共用設定，格式見 [profile 模板](skills/code-analysis/assets/analysis-profile.template.md)。不同專案需要不同產出時，在 profile 與專案模板調整，不修改套件；完整做法見 [專案整合與套件更新指引](docs/project-integration.md)。簡例：
 
 ```markdown
-# 專案分析設定
+# Analysis Profile
+## 專案結構
 - 來源根目錄：backend/、frontend/
-- 已確認入口：backend/src/routes/、frontend/src/pages/
-- 文件目錄：docs/analysis/
-- 文件語言：繁體中文
-- SA 模板：docs/templates/sa.md
-- 分析慣例：現況與需求分開；外部服務未實測時明列限制
+- 入口定位方式：backend/src/routes/、frontend/src/pages/
+## 輸出
+- 文件目錄：docs/analysis/<feature>/
+- 預設交付物：SA.md
+
+| 文件 | 模板位置 | 必要內容 | 讀者 |
+|---|---|---|---|
+| SA.md | docs/templates/sa.md | 畫面操作、例外、Given-When-Then | PM／QA |
+
+## 額外邊界
+- 不分析 legacy/；外部服務契約以 contracts/*.yaml 為準
 ```
 
 上例路徑必須換成實際查證的位置。Profile 不放密碼或 token；內容只作導航，實際行為仍核對目前來源。結構改變時更新受影響設定，不以舊 profile 取代查證。
@@ -152,6 +159,8 @@ Profile 是可選的共用設定，格式見 [profile 模板](skills/code-analys
 | Skill | 目標、邊界、完成判準與按需方法 | 各專案共用，不寫專案內容 |
 | 專案指引／profile | 模組、路徑、慣例、文件目錄與模板 | 沿用有效資訊 |
 | 本次要求 | 入口、範圍、讀者、交付文件與必要驗證 | 每次指定，可覆寫一般輸出偏好 |
+
+優先序：本次要求 > 專案設定 > Skill 預設。專案設定內分工：`CLAUDE.md`／`AGENTS.md` 管安全與工作區邊界，profile 管來源導覽與交付位置，模板管文件章節。同一欄位在兩處衝突時代理會詢問，該交付物在釐清前標 `blocked`；因此同一設定只寫在一處。
 
 ## 使用範例
 
@@ -193,6 +202,20 @@ $code-analysis
 同時查錯誤主張與重要缺漏，不修改原文件。
 ```
 
+**要交給他人使用，要求獨立審查：**
+
+```text
+$code-analysis
+分析取消訂單功能，交付 docs/analysis/cancel-order/SA.md，要 verified。
+```
+
+**長任務，要求可續跑：**
+
+```text
+$code-analysis
+分析整個 billing 模組，範圍大，請保存續跑快照。
+```
+
 **中斷後續跑：**
 
 ```text
@@ -226,9 +249,19 @@ $code-analysis
 
 使用者接受的偏差寫在文件限制段落。
 
+**何時要求 `verified`**：文件要交給 PM、QA 或作為規格依據，或以較小模型進行分析時。Reviewer 不看 Maker 的結論，自行讀原始碼雙向核對並寫 `REVIEW.md`；代價是多一輪讀碼，時間約增加一倍，因此預設不開。
+
+- 只有審查通過且無未解阻擋問題才標 `verified`；Reviewer 判 fail 或 incomplete 時為 `self_reviewed` 或 `blocked`。
+- 審查後再修改文件或來源，`verified` 即失效，需重新審查。
+- 此路徑尚未做情境實測，見下方驗證限制。
+
+**模型選擇（推論，未跨模型實測）**：新版不固定步驟，品質較依賴模型自行窮舉分支、誠實自查與不捏造契約。建議使用能力較強的模型；用較小模型時搭配 `verified` 補足自查。
+
 ## 從舊版遷移與後續更新
 
 `0.13.0` 已移除 `/analysis-init`、`/start-analysis`、`/verify-code`、分層 skills、數字評分 agents、舊 harness 模板與 PowerShell 工具。改用唯一 `code-analysis` 入口；功能分析方法收在新版 references，PDF 等轉檔工作交由適合的文件工具處理。
+
+`0.14.0` 起 `REVIEW.md` 與 `run.json` 不再預設產生，狀態值 `review_pending`、`accepted_with_exceptions` 移除；依賴這些檔案或狀態的流程需在要求中明說（要 verified／要可續跑）。詳見 [CHANGELOG](CHANGELOG.md)。
 
 保留既有 profile 與分析文件即可，不需要刪掉專案產物。舊 harness 狀態不是新版 `run.json`；接續舊工作時，提供既有文件與來源範圍，重新核對後建立新版紀錄，不直接把舊 PASS 當成新版通過。
 
@@ -271,8 +304,8 @@ claude plugin validate .claude-plugin/marketplace.json --strict
 claude plugin validate skills --strict
 ```
 
-工具測試涵蓋真實檔案異動、缺檔、版本衝突、活動鎖、部分修補恢復、路徑越界與無效輸入。另有一個隔離案例完成獨立雙向審查與實際中斷續跑；詳見 [設計與驗證紀錄](docs/code-analysis-skill.md)。
+工具測試涵蓋真實檔案異動、缺檔、版本衝突、活動鎖、部分修補恢復、路徑越界與無效輸入。`0.14.0` 以 Codex（gpt-5.6-sol）在四個隔離合成專案實跑正向、反向（不捏造契約）、只核對既有文件、profile 客製四種情境，均通過；`0.13.0` 另有一次獨立審查與中斷續跑案例。詳見 [設計與驗證紀錄](docs/code-analysis-skill.md)。
 
-尚未在獨立 Claude Code 執行環境及 Windows 完成端到端實測，也未量化長期 token／時間節省。Skill 不能保證平台永不中斷；保存與核對的用途是減少恢復時的重做。
+尚未實測：Claude Code 端到端、Windows、`0.14.0` 的 `verified` 路徑、跨模型比較與重複抽樣；也未量化 token／時間節省。Skill 不能保證平台永不中斷；保存與核對的用途是減少恢復時的重做。
 
 授權：[MIT](LICENSE)。舊流程沿革保留於 [CHANGELOG](CHANGELOG.md)，不作目前操作指南。
