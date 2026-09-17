@@ -4,7 +4,7 @@
 
 Claude Code 可安裝整個 plugin；Claude Code 與 Codex 也能單獨安裝同一份 Skill。套件不綁定特定語言、框架、資料庫或文件份數。
 
-目前版本：`0.13.0`。新版位於 [`codex/unified-code-analysis-skill`](https://github.com/jin576tw/code-analysis-package/tree/codex/unified-code-analysis-skill) 分支；取得程式碼時請指定此分支。
+目前版本：`0.14.0`。新版位於 [`codex/unified-code-analysis-skill`](https://github.com/jin576tw/code-analysis-package/tree/codex/unified-code-analysis-skill) 分支；取得程式碼時請指定此分支。
 
 ## 核心做法
 
@@ -12,24 +12,17 @@ Claude Code 可安裝整個 plugin；Claude Code 與 Codex 也能單獨安裝同
 - 依讀者與交付要求，產出整合分析、SA、SD、API 契約、ERD、流程圖等需要的內容。
 - 合併共用證據，分析方法按需讀取，不固定先產出多份中間文件。
 - 用「文件 → 來源」查錯誤主張，用「來源／需求 → 文件」查重要缺漏。
-- 正常連續執行，保存進度後接續工作；中斷時核對實際檔案後恢復。
+- Skill 只規定目標、邊界與完成判準，不固定步驟；預設自查，要求時才做獨立審查。
 
 不設 Full／Fast 模式、不逐階段評分、不在里程碑完成後例行停問。入口歧義或必要證據不足時，仍會指出缺口並完成可獨立進行的部分。
 
 ```mermaid
-flowchart TD
-    A["辨識專案、入口與本次輸出要求"] --> B["來源證據與行為清單"]
-    B --> C["產出需要的文件"]
-    C --> D["雙向審查"]
-    D --> E{"有需要修補的問題？"}
-    E -->|沒有| H["核對指紋並交付"]
-    E -->|有| F["集中修補一次"]
-    F --> G["完整複審"]
-    G -->|無阻擋問題| H
-    G -->|仍有阻擋問題| I["交付已完成成果與具體缺口"]
-    B -. 保存後繼續 .-> J["同一份 run.json"]
-    C -. 保存後繼續 .-> J
-    G -. 保存後繼續 .-> J
+flowchart LR
+    A["本次要求＋專案 profile／模板"] --> B["追查來源並產出文件"]
+    B --> C{"符合完成判準？"}
+    C -->|是| D["交付（self_reviewed）"]
+    C -->|要求 verified| E["獨立審查，複審只看修補項"]
+    E --> F["交付（verified／blocked）"]
 ```
 
 ## 安裝
@@ -134,15 +127,13 @@ cp -R /path/to/code-analysis-package/skills/code-analysis .claude/skills/
 
 ### 執行需求
 
-分析使用 Claude／Codex 現有的檔案、搜尋與執行工具。`checkpoint.mjs` 使用 Node.js 內建模組，不需要 `npm install`；目前測試環境為 Node.js `24.16.0`。
-
-沒有 Node.js 時仍能分析，可用現有 SHA-256 工具與人工紀錄核對檔案，但需說明沒有自動鎖與續跑檢查。不內建瀏覽器安裝、PDF／DOCX 產生器或外部服務連線；需要時使用專案可用且獲准的工具。
+分析使用 Claude／Codex 現有的檔案、搜尋與執行工具。選用的 `checkpoint.mjs` 使用 Node.js 內建模組，不需要 `npm install`；只在長任務或要求續跑時使用，沒有 Node.js 也能分析。不內建瀏覽器安裝、PDF／DOCX 產生器或外部服務連線；需要時使用專案可用且獲准的工具。
 
 ## 第一次進入專案：初始化併入分析開頭
 
 不必先執行初始化指令。Skill 會讀取專案指引與既有 `.analysis-profile.md`，確認本次入口、範圍及輸出位置；沒有 profile 時，只從建置檔、目錄、路由或 job 定義辨識本次必要資訊。
 
-Profile 是可選的共用設定。常在同一專案工作時，可請代理依已確認來源整理一份，記錄穩定資訊，例如：
+Profile 是可選的共用設定，格式見 [profile 模板](skills/code-analysis/assets/analysis-profile.template.md)。不同專案需要不同產出時，在 profile 與專案模板調整，不修改套件；完整做法見 [專案整合與套件更新指引](docs/project-integration.md)。簡例：
 
 ```markdown
 # 專案分析設定
@@ -158,7 +149,7 @@ Profile 是可選的共用設定。常在同一專案工作時，可請代理依
 
 | 設定層次 | 內容 | 套用方式 |
 |---|---|---|
-| Skill | 分析、證據、審查與續跑方法 | 各專案共用 |
+| Skill | 目標、邊界、完成判準與按需方法 | 各專案共用，不寫專案內容 |
 | 專案指引／profile | 模組、路徑、慣例、文件目錄與模板 | 沿用有效資訊 |
 | 本次要求 | 入口、範圍、讀者、交付文件與必要驗證 | 每次指定，可覆寫一般輸出偏好 |
 
@@ -206,8 +197,8 @@ $code-analysis
 
 ```text
 $code-analysis
-讀取 .analysis/docs/cancel-order/run.json，核對指紋與來源範圍，
-沿用仍有效的成果，接續未完成工作。
+接續 .analysis/docs/cancel-order/ 的分析，核對來源是否變動，
+沿用仍有效的成果，只重查受影響部分。
 ```
 
 未指定格式時，預設產出一份整合分析。需要多份文件就明列交付清單；涉及多個模組不會自動增加文件份數。使用者模板優先，未提供時才採最小預設骨架；不要求另填模式或 JSON 輸出契約。
@@ -219,23 +210,21 @@ $code-analysis
 ```text
 .analysis/docs/cancel-order/
 ├── ANALYSIS.md     # 或本次指定的 SA.md、SD.md 等文件
-├── REVIEW.md       # 審查範圍、問題與限制
-└── run.json        # 檔案指紋、revision、已完成事項與待辦
+├── REVIEW.md       # 僅獨立審查或要求審查紀錄時
+└── run.json        # 僅使用選用快照時
 ```
 
-範圍與證據先放分析附錄；多文件需要共用時才拆出 `EVIDENCE.md`。需要保留多次執行歷史時才使用 `_run/<run-id>/`，續跑沿用原 run。核對既有文件時可以只新增審查紀錄與必要快照，不重新生成分析；純排版／轉檔則做適用的呈現與內容一致性檢查。
+範圍與證據先放分析附錄；多文件需要共用時才拆出 `EVIDENCE.md`。核對既有文件時只交付審查紀錄，不重新生成分析；純排版／轉檔則做適用的呈現與內容一致性檢查。
 
-**本版沒有預先定義的分析 agent 檔案，但仍可使用一個獨立審查子代理。** 主代理完成分析，環境提供且允許子代理時，由一個 Reviewer 自行核對來源。沒有需修補問題就不再複審；需修補時集中處理一次，再完整複審。非阻擋用字建議不啟動新一輪。
+**預設由主代理自查**（雙向核對），狀態為 `self_reviewed`。要求 `verified` 或獨立審查時，環境允許就交一個 Reviewer 子代理；修補後只複審已修項目。Claude Code 與 Codex 子代理可用性不同，無子代理時維持 `self_reviewed` 並說明。
 
 | 判定 | 意義 |
 |---|---|
-| `verified` | 獨立雙向審查完成、當前指紋一致、必要內容與證據齊全，無未解阻擋缺陷 |
-| `self_reviewed` | 只有主代理自查，不能稱為獨立審查通過 |
-| `review_pending` | 本次要求的必要審查尚未完成 |
+| `verified` | 獨立審查完成，必要內容與證據齊全，無未解阻擋缺陷 |
+| `self_reviewed` | 主代理已完成雙向自查 |
 | `blocked` | 缺少影響交付正確性的來源或必要執行證據 |
-| `accepted_with_exceptions` | 使用者明確接受已列出的偏差 |
 
-`run.json` 的 `done` 只代表執行進度；指紋一致只代表被追蹤檔案未變，兩者都不能自行證明分析正確或來源清單完整。
+使用者接受的偏差寫在文件限制段落。
 
 ## 從舊版遷移與後續更新
 
@@ -252,7 +241,7 @@ claude plugin marketplace update code-analysis-package
 claude plugin update code-analysis-package@code-analysis-package --scope local
 ```
 
-原本使用其他安裝範圍者，更新時使用相同範圍，完成後重新啟動 Claude Code。獨立複製 Skill 的使用者需同步更新整份資料夾；若曾自行修改，先比對與保留修改，避免直接覆蓋或巢狀複製成兩層同名目錄。
+專案側 profile／模板的檢查與試跑方式見 [專案整合與套件更新指引](docs/project-integration.md)。原本使用其他安裝範圍者，更新時使用相同範圍，完成後重新啟動 Claude Code。獨立複製 Skill 的使用者需同步更新整份資料夾；若曾自行修改，先比對與保留修改，避免直接覆蓋或巢狀複製成兩層同名目錄。
 
 ## 套件結構與驗證
 
@@ -262,12 +251,12 @@ code-analysis-package/
 ├── skills/code-analysis/
 │   ├── SKILL.md            # 唯一分析入口
 │   ├── references/         # 按需分析、交付、審查與續跑說明
-│   ├── assets/             # 分析模板
-│   ├── scripts/checkpoint.mjs
+│   ├── assets/             # 分析與 profile 模板
+│   ├── scripts/checkpoint.mjs  # 選用快照
 │   ├── agents/openai.yaml  # Codex 顯示 metadata，不是子代理定義
 │   └── LICENSE
 ├── tests/code-analysis/    # 工具測試與合成分析樣本
-├── docs/code-analysis-skill.md
+├── docs/                   # 設計紀錄、專案整合指引
 ├── README.md
 ├── CHANGELOG.md
 └── LICENSE

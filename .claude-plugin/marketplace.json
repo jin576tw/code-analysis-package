@@ -10,8 +10,8 @@
     {
       "name": "code-analysis-package",
       "source": "./",
-      "description": "單一 code-analysis skill，依專案來源與本次要求產出分析文件，附審查紀錄與續跑快照。",
-      "version": "0.13.0"
+      "description": "單一 code-analysis skill，依專案 profile 與本次要求產出可追溯分析文件。",
+      "version": "0.14.0"
     }
   ]
 }

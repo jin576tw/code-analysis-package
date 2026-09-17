@@ -2,8 +2,8 @@
   "$schema": "https://json.schemastore.org/claude-code-plugin-manifest.json",
   "name": "code-analysis-package",
   "displayName": "程式碼分析",
-  "version": "0.13.0",
-  "description": "以單一 code-analysis skill 分析不同專案，依交付要求產出可追溯文件，整合雙向審查、集中修補與檔案快照續跑。",
+  "version": "0.14.0",
+  "description": "以單一 code-analysis skill 分析不同專案，依目標、邊界與完成判準產出可追溯文件；預設自查，要求時獨立審查。",
   "author": {
     "name": "jin576tw",
     "url": "https://github.com/jin576tw"

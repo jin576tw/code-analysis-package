@@ -3,6 +3,21 @@
 All notable changes to this plugin are documented here.
 This project adheres to [Semantic Versioning](https://semver.org).
 
+## [0.14.0] - 2026-09-17
+
+### 變更
+- SKILL.md 由六個編號步驟改為「目標、邊界、完成判準」，執行順序交由代理判斷；references 改為按情況查閱。
+- 審查預設為主代理雙向自查；要求 `verified` 時才使用獨立 Reviewer，修補後只複審已修項目。
+- 交付狀態縮為 `verified`／`self_reviewed`／`blocked`，移除 `review_pending`、`accepted_with_exceptions`。
+- `checkpoint.mjs` 改為選用，只在長任務或要求續跑時使用；腳本與測試不變。
+- REVIEW.md 以證據 ID 引用，不重抄來源位置；刪除 deliverables 的固定產出順序。
+- 新增 `assets/analysis-profile.template.md` 與 `docs/project-integration.md`（專案整合、新增交付文件、更新套件的完成判準）。
+
+### 專案相容性影響
+- 既有 `.analysis-profile.md` 與專案模板照常使用；可補上新模板的「文件表」與「額外邊界」欄位。
+- 過去預設產出的 `REVIEW.md`、`run.json` 現在只在獨立審查／選用快照時產生；依賴這兩個檔案存在的流程需明確要求。
+- 狀態值 `review_pending`、`accepted_with_exceptions` 不再產生。
+
 ## [0.13.0] - 2026-09-07
 
 ### 變更

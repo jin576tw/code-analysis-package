@@ -1,4 +1,4 @@
 interface:
   display_name: "程式碼功能分析"
-  short_description: "依需求分析程式碼，集中核對證據與缺漏，持續執行並保存輕量續跑紀錄"
-  default_prompt: "使用 $code-analysis 分析指定功能，依交付需求產出文件並完成雙向審查。"
+  short_description: "依需求與專案設定分析程式碼，產出可追溯文件並雙向核對"
+  default_prompt: "使用 $code-analysis 分析指定功能，依交付需求產出可追溯文件。"

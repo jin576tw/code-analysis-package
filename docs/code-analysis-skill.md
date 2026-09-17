@@ -3,30 +3,30 @@
 入口：[SKILL.md](../skills/code-analysis/SKILL.md)。整個 `skills/code-analysis/` 可單獨複製，包含授權、按需參考資料與一支零外部依賴 Node.js 輔助工具。
 本文件說明新版設計與驗證；不是 skill 執行時必讀的另一層流程。
 
-## 蒸餾後的流程
+## 設計（0.14.0）
 
-```mermaid
-flowchart TD
-    A["確認目標與交付要求"] --> B["追查來源與行為清單"]
-    B --> C["產出需要的分析文件"]
-    C --> D["一次獨立雙向審查"]
-    D --> E{"有需要修補的問題？"}
-    E -->|沒有| H["核對內容指紋並交付"]
-    E -->|有| F["集中修補一次"]
-    F --> G["完整複審"]
-    G -->|無阻擋問題| H
-    G -->|仍有阻擋問題| I["交付已完成成果與具體缺口"]
-    B -. 保存進度後繼續 .-> J["單一 run.json"]
-    C -. 保存進度後繼續 .-> J
-    G -. 保存進度後繼續 .-> J
-```
+SKILL.md 只寫**目標、邊界、完成判準**，不固定執行步驟；方法細節按需讀 references。依 personal 工具調整驗收指引：永久指令只留穩定邊界（TA-03）、script 只承擔機械檢查（TA-09）、保留技術不變量如 SQL 重建規則（TA-11）。
 
-- 不分模式，不逐階段打分，不固定產出九份中間文件。
-- 目前主代理是 Maker；可用且獲准時使用一個獨立 Reviewer，未修補不再做第二輪。
-- 正常連續執行，不在 checkpoint 後停問或要求換 session；無法防止平台／程序中斷，能從已保存內容恢復。
-- 範圍與證據優先放文件附錄；多文件共用時才拆出 EVIDENCE.md。預設為分析文件、REVIEW.md、run.json 三類產物。
-- 小任務可合併盤點與草稿保存；分批讀取依來源群組，不每個欄位都派工或產出狀態文件。
-- UI 靜態覆蓋、必要執行證據、交付圖片分別判斷；不因 UI 存在就強制 Mock 或瀏覽器安裝。
+- 預設主代理自查（`self_reviewed`）；要求時才獨立審查，複審只核對修補項。省去過去最多三次全量讀原始碼。
+- 交付狀態只有 `verified`／`self_reviewed`／`blocked`。
+- `checkpoint.mjs` 改為選用，只在長任務或要求續跑時使用。
+- 證據只記在分析文件的覆蓋表；REVIEW.md 以證據 ID 引用。
+- 專案差異放在專案側 profile／模板，見 [專案整合指引](project-integration.md)。
+
+## 0.14.0 情境驗證（Codex）
+
+方案由獨立 `codex exec -m gpt-5.6-sol` 唯讀審查設計，並據其兩項中度發現先補齊：`verified` 的充分條件寫回 SKILL.md、專案設定（指引／profile／模板）分工與衝突處理明確化。
+
+四個隔離暫存專案，各自複製 `skills/code-analysis/` 到 `.agents/skills/`，以 `codex exec -m gpt-5.6-sol -s workspace-write --ephemeral` 實跑，單案 81–147 秒：
+
+| 情境 | 預期 | 結果 |
+|---|---|---|
+| 正向：分析合成 `cancelOrder`，只要 ANALYSIS.md | 六章節齊全、狀態 `self_reviewed`、覆蓋 403／404／已取消／已出貨／restock／退款失敗 202、證據引用來源路徑、無 REVIEW.md／run.json | 通過 |
+| 反向：要求不存在的 HTTP 路由、排程、持久化重試 | 狀態 `blocked`，三類缺口列為無證據，不捏造 endpoint／排程／retry queue | 通過 |
+| 邊界：只核對既有 OLD.md | 只產 REVIEW.md、OLD.md 雜湊不變、`review_kind: self`、指出錯誤主張與漏寫分支 | 通過（verdict: fail，即文件確有缺陷） |
+| 客製：profile 預設 API-CONTRACT.md，本次只要 QA 文件 | 產 `docs/custom/CANCEL-QA.md` 並保留專案模板六章節、不產 profile 預設文件、profile 與模板未被修改 | 通過 |
+
+限制：僅 Codex、僅合成來源、各情境單次執行；未測 Claude Code 端到端、Windows、獨立 Reviewer 子代理與 `verified` 路徑。`checkpoint.mjs` 20 項單元測試仍通過（`node --test tests/code-analysis/checkpoint.test.mjs`）。
 
 ## 從歷史案例保留的防護
 
