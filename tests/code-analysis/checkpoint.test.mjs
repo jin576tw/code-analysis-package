@@ -119,12 +119,22 @@ test('symlink outside root and duplicate aliases cannot enter snapshot', t => {
   const outside = fs.mkdtempSync(path.join(os.tmpdir(), 'analysis-outside-'));
   t.after(() => fs.rmSync(outside, { recursive: true, force: true }));
   fs.writeFileSync(path.join(outside, 'secret'), 'do not read');
-  fs.symlinkSync(path.join(outside, 'secret'), path.join(f.root, 'escape'));
-  f.input.files.push({ path: 'escape', role: 'source' });
+  if (process.platform === 'win32') {
+    fs.symlinkSync(outside, path.join(f.root, 'escape-dir'), 'junction');
+    f.input.files.push({ path: 'escape-dir/secret', role: 'source' });
+  } else {
+    fs.symlinkSync(path.join(outside, 'secret'), path.join(f.root, 'escape'));
+    f.input.files.push({ path: 'escape', role: 'source' });
+  }
   assert.equal(f.save().data.error, 'PATH_OUTSIDE_ROOT');
   f.input.files.pop();
-  fs.symlinkSync(path.join(f.root, 'source.js'), path.join(f.root, 'alias'));
-  f.input.files.push({ path: 'alias', role: 'source' });
+  if (process.platform === 'win32') {
+    fs.symlinkSync(f.root, path.join(f.root, 'alias-dir'), 'junction');
+    f.input.files.push({ path: 'alias-dir/source.js', role: 'source' });
+  } else {
+    fs.symlinkSync(path.join(f.root, 'source.js'), path.join(f.root, 'alias'));
+    f.input.files.push({ path: 'alias', role: 'source' });
+  }
   assert.equal(f.save().data.error, 'DUPLICATE_FILE_ALIAS');
 });
 test('unknown command, missing files, empty manifest and identity changes fail', t => {
