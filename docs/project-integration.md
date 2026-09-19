@@ -43,10 +43,12 @@ code-analysis 在不同專案會產出不同文件。原則：**套件只放通�
 1. 確認套件目錄沒有手改；有的話先把該內容移到專案側（profile、模板或 `CLAUDE.md`／`AGENTS.md`）。
 2. 讀 [CHANGELOG](../CHANGELOG.md) 對應版本的「專案相容性影響」。
 3. 以原安裝方式與範圍重新安裝（`npx skills add` 重跑同一指令；plugin 使用 `claude plugin update` 或重新安裝），並開新 session。
-4. 對同一個小功能重跑，比對與舊產出的差異。
+4. 盤點專案內是否仍有舊版套件 mirror、命令 wrapper 或腳本 caller。獨立 Skill 安裝完成後，舊 mirror 不會自動失效；若它仍被 caller 引用，先把確實屬於專案的 helper 移到專案自有目錄並建立真實驗證，再移除過期的通用 commands、agents、skills 與空殼 shim。未註冊或沒有實作的 caller 必須非零失敗，不得把空回應當成通過。
+5. 對同一個小功能重跑，比對與舊產出的差異。
 
 完成判準：
 - 套件目錄與新版來源一致（無殘留手改、無巢狀重複目錄、未同時安裝 plugin 與獨立 skill）。
+- caller inventory 不再指向過期 mirror 或已移除入口；保留的專案 helper 有明確專案邊界與可重現測試。
 - 試跑產出的位置與章節仍符合 profile；差異都能對應到 CHANGELOG 所列變更。
 - 受影響的 profile／模板已更新。
 

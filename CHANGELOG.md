@@ -12,6 +12,7 @@ This project adheres to [Semantic Versioning](https://semver.org).
 - `checkpoint.mjs` 改為選用，只在長任務或要求續跑時使用；腳本與測試不變。
 - REVIEW.md 以證據 ID 引用，不重抄來源位置；刪除 deliverables 的固定產出順序。
 - 新增 `assets/analysis-profile.template.md` 與 `docs/project-integration.md`（專案整合、新增交付文件、更新套件的完成判準）。
+- 補充專案更新指引：獨立 Skill 重裝後仍須盤點舊 vendored mirror、wrapper 與 caller；專案專屬 helper 應留在專案側，未實作 caller 必須 fail closed，避免舊流程在新版入口旁繼續生效。
 
 ### 專案相容性影響
 - 既有 `.analysis-profile.md` 與專案模板照常使用；可補上新模板的「文件表」與「額外邊界」欄位。
